@@ -11,6 +11,8 @@ import { HUD } from './ui/HUD';
 import { PlanetSelector } from './ui/PlanetSelector';
 import { PlayerController } from './player/PlayerController';
 import { CameraManager } from './camera/CameraManager';
+import { DebugPanel } from './ui/DebugPanel';
+import { PerformanceMonitor } from './core/PerformanceMonitor';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -22,6 +24,8 @@ export class App implements IDisposable {
   private planetSelector: PlanetSelector;
   private playerController: PlayerController;
   private cameraManager: CameraManager;
+  private debugPanel: DebugPanel;
+  private performanceMonitor: PerformanceMonitor;
   private clock = new THREE.Clock();
   private animationId = 0;
   private currentPlanet: PlanetType = 'earth';
@@ -62,6 +66,9 @@ export class App implements IDisposable {
       getPlanetRadius: () => this.sceneManager.planetRadius,
       planetCenter: new THREE.Vector3(0, 0, 0),
     });
+
+    this.debugPanel = new DebugPanel();
+    this.performanceMonitor = new PerformanceMonitor();
 
     window.addEventListener('resize', this.onResize);
   }
@@ -106,7 +113,14 @@ export class App implements IDisposable {
         position: cameraPosition,
       });
 
+      this.performanceMonitor.update();
+
       this.engine.render(this.sceneManager.scene, this.cameraSystem.camera);
+
+      this.debugPanel.update({
+        fps: this.performanceMonitor.getFPS(),
+        activeNodes: 0,
+      });
     };
     loop();
   }
@@ -118,6 +132,7 @@ export class App implements IDisposable {
     this.playerController.dispose();
     this.inputManager.dispose();
     this.hud.dispose();
+    this.debugPanel.dispose();
     this.planetSelector.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
