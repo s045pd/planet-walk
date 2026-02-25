@@ -3,6 +3,7 @@ import type { IDisposable } from '../core/types';
 import type { PlanetConfig } from './PlanetConfig';
 import { TerrainMaterial } from './terrain/TerrainMaterial';
 import { Atmosphere } from './atmosphere/Atmosphere';
+import { EarthEffects } from './effects/EarthEffects';
 
 /** 星球基类：球体网格 + 纹理 + 可选大气层 */
 export class Planet implements IDisposable {
@@ -11,6 +12,8 @@ export class Planet implements IDisposable {
   readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial | TerrainMaterial>;
 
   private atmosphere?: Atmosphere;
+  private earthEffects?: EarthEffects;
+  private readonly sunDirection = new THREE.Vector3(1, 0.3, 0.5).normalize();
   private readonly textureLoader = new THREE.TextureLoader();
 
   constructor(config: PlanetConfig) {
@@ -71,6 +74,12 @@ export class Planet implements IDisposable {
       );
       this.root.add(this.atmosphere.mesh);
     }
+
+    // 地球特效：云层+夜景+海洋高光
+    if (config.name === 'earth') {
+      this.earthEffects = new EarthEffects(config.radius, config.segments);
+      this.root.add(this.earthEffects.root);
+    }
   }
 
   /**
@@ -129,12 +138,21 @@ export class Planet implements IDisposable {
     return texture;
   }
 
+  /** 每帧更新（地球特效等） */
+  update(delta: number): void {
+    this.earthEffects?.update(delta, this.sunDirection);
+  }
+
   dispose(): void {
     this.mesh.geometry.dispose();
     this.mesh.material.dispose();
 
     if (this.atmosphere) {
       this.atmosphere.dispose();
+    }
+
+    if (this.earthEffects) {
+      this.earthEffects.dispose();
     }
   }
 }
