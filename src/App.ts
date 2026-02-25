@@ -6,12 +6,14 @@ import { InputManager } from './core/InputManager';
 import type { IDisposable } from './core/types';
 import { PlanetFactory } from './planet/PlanetFactory';
 import type { PlanetType } from './planet/PlanetFactory';
+import { Planet } from './planet/Planet';
 import { cartesianToGeo } from './utils/geo';
 import { HUD } from './ui/HUD';
 import { PlanetSelector } from './ui/PlanetSelector';
 import { PlayerController } from './player/PlayerController';
 import { CameraManager } from './camera/CameraManager';
 import { DebugPanel } from './ui/DebugPanel';
+import { LoadingScreen } from './ui/LoadingScreen';
 import { PerformanceMonitor } from './core/PerformanceMonitor';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
@@ -25,10 +27,12 @@ export class App implements IDisposable {
   private playerController: PlayerController;
   private cameraManager: CameraManager;
   private debugPanel: DebugPanel;
+  private loadingScreen: LoadingScreen;
   private performanceMonitor: PerformanceMonitor;
   private clock = new THREE.Clock();
   private animationId = 0;
   private currentPlanet: PlanetType = 'earth';
+  private planet: Planet;
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new Engine({
@@ -39,6 +43,7 @@ export class App implements IDisposable {
     });
 
     const planet = PlanetFactory.create(this.currentPlanet);
+    this.planet = planet;
     this.sceneManager = new SceneManager(planet);
     this.cameraSystem = new CameraSystem();
     this.inputManager = new InputManager(canvas);
@@ -68,6 +73,7 @@ export class App implements IDisposable {
     });
 
     this.debugPanel = new DebugPanel();
+    this.loadingScreen = new LoadingScreen();
     this.performanceMonitor = new PerformanceMonitor();
 
     window.addEventListener('resize', this.onResize);
@@ -96,7 +102,16 @@ export class App implements IDisposable {
     this.planetSelector.setActive(planetType);
   };
 
-  start(): void {
+  async start(): Promise<void> {
+    this.loadingScreen.show();
+
+    await this.planet.loadTextures((percent) => {
+      this.loadingScreen.setProgress(percent);
+    });
+
+    await this.loadingScreen.hide();
+    this.cameraManager.switchTo('orbit');
+
     this.clock.start();
     const loop = (): void => {
       this.animationId = requestAnimationFrame(loop);
@@ -133,6 +148,7 @@ export class App implements IDisposable {
     this.inputManager.dispose();
     this.hud.dispose();
     this.debugPanel.dispose();
+    this.loadingScreen.dispose();
     this.planetSelector.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
