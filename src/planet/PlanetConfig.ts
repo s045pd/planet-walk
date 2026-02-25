@@ -12,12 +12,24 @@ export interface PlanetTextureConfig {
   fallbackColor: number;
 }
 
+/** 散射参数（可选，覆盖内置预设） */
+export interface ScatteringConfig {
+  rayleighCoeff: { x: number; y: number; z: number };
+  mieCoeff: number;
+  rayleighScale: number;
+  mieScale: number;
+  mieDirection: number;
+  intensity: number;
+}
+
 /** 大气层参数 */
 export interface AtmosphereConfig {
   enabled: boolean;
   color: number;
   thickness: number;
   opacity: number;
+  /** Optional override for scattering params; if omitted, uses built-in presets */
+  scattering?: ScatteringConfig;
 }
 
 /** 地形配置 */
