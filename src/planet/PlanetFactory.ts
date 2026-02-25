@@ -33,6 +33,11 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       { name: 'Mount Everest', lat: 27.9881, lng: 86.925, description: 'Earth highest peak' },
       { name: 'Grand Canyon', lat: 36.1069, lng: -112.1129, description: 'Colorado Plateau canyon system' },
     ],
+    weather: {
+      types: ['clear', 'cloudy', 'rain', 'snow', 'fog'],
+      changeInterval: 120,
+      defaultWeather: 'clear',
+    },
   },
   mars: {
     name: 'mars',
@@ -60,6 +65,11 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       { name: 'Gale Crater', lat: -5.4, lng: 137.8, description: 'Curiosity rover landing site' },
       { name: 'Jezero Crater', lat: 18.38, lng: 77.58, description: 'Perseverance rover landing site' },
     ],
+    weather: {
+      types: ['dust_storm', 'blue_sunset', 'thin_atmosphere'],
+      changeInterval: 90,
+      defaultWeather: 'thin_atmosphere',
+    },
   },
   moon: {
     name: 'moon',
@@ -87,6 +97,11 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       { name: 'Copernicus Crater', lat: 9.62, lng: -20.08, description: 'Large ray crater' },
       { name: 'Shackleton Crater', lat: -89.9, lng: 0, description: 'South pole crater with permanent shadow' },
     ],
+    weather: {
+      types: ['micro_impact', 'lunar_dust', 'extreme_light'],
+      changeInterval: 60,
+      defaultWeather: 'extreme_light',
+    },
   },
 };
 
@@ -100,6 +115,7 @@ export class PlanetFactory {
       atmosphere: config.atmosphere ? { ...config.atmosphere } : undefined,
       terrain: config.terrain ? { ...config.terrain } : undefined,
       landmarks: config.landmarks.map((landmark) => ({ ...landmark })),
+      weather: config.weather ? { ...config.weather, types: [...config.weather.types] } : undefined,
     });
   }
 

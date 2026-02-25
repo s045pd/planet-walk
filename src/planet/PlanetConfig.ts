@@ -45,6 +45,22 @@ export interface TerrainConfig {
   tileResolution?: number;
 }
 
+/** 天气类型 */
+export type WeatherType =
+  | 'clear' | 'cloudy' | 'rain' | 'snow' | 'fog'       // 地球
+  | 'dust_storm' | 'blue_sunset' | 'thin_atmosphere'    // 火星
+  | 'micro_impact' | 'lunar_dust' | 'extreme_light';    // 月球
+
+/** 天气配置 */
+export interface WeatherConfig {
+  /** 可用天气类型列表 */
+  types: WeatherType[];
+  /** 天气自动切换间隔（秒） */
+  changeInterval: number;
+  /** 默认天气 */
+  defaultWeather: WeatherType;
+}
+
 /** 预设兴趣点（地标） */
 export interface PlanetLandmark {
   name: string;
@@ -64,4 +80,5 @@ export interface PlanetConfig {
   atmosphere?: AtmosphereConfig;
   terrain?: TerrainConfig;
   landmarks: PlanetLandmark[];
+  weather?: WeatherConfig;
 }
