@@ -10,6 +10,7 @@ import { cartesianToGeo } from './utils/geo';
 import { HUD } from './ui/HUD';
 import { PlanetSelector } from './ui/PlanetSelector';
 import { PlayerController } from './player/PlayerController';
+import { CameraManager } from './camera/CameraManager';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -20,6 +21,7 @@ export class App implements IDisposable {
   private hud: HUD;
   private planetSelector: PlanetSelector;
   private playerController: PlayerController;
+  private cameraManager: CameraManager;
   private clock = new THREE.Clock();
   private animationId = 0;
   private currentPlanet: PlanetType = 'earth';
@@ -50,6 +52,15 @@ export class App implements IDisposable {
       planetRadius: planet.config.radius,
       gravity: planet.config.gravity,
       surfaceMeshes: [planet.mesh],
+    });
+
+    this.cameraManager = new CameraManager({
+      camera: this.cameraSystem.camera,
+      domElement: canvas,
+      input: this.inputManager,
+      playerController: this.playerController,
+      getPlanetRadius: () => this.sceneManager.planetRadius,
+      planetCenter: new THREE.Vector3(0, 0, 0),
     });
 
     window.addEventListener('resize', this.onResize);
@@ -83,7 +94,7 @@ export class App implements IDisposable {
     const loop = (): void => {
       this.animationId = requestAnimationFrame(loop);
       const delta = this.clock.getDelta();
-      this.playerController.update(delta);
+      this.cameraManager.update(delta);
 
       const cameraPosition = this.cameraSystem.camera.position;
       const geo = cartesianToGeo(cameraPosition, this.sceneManager.planetRadius);
@@ -103,6 +114,7 @@ export class App implements IDisposable {
   dispose(): void {
     cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', this.onResize);
+    this.cameraManager.dispose();
     this.playerController.dispose();
     this.inputManager.dispose();
     this.hud.dispose();
