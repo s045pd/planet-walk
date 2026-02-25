@@ -1,9 +1,6 @@
 import * as THREE from 'three';
 import type { IDisposable } from '../../core/types';
 
-const BASE = import.meta.env.BASE_URL;
-const NIGHT_TEXTURE_PATH = BASE + 'assets/textures/earth/night.jpg';
-
 const vertexShader = /* glsl */ `
 varying vec3 vNormal;
 varying vec2 vUv;
@@ -44,7 +41,7 @@ void main() {
 export class NightLights implements IDisposable {
   readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
 
-  constructor(planetRadius: number, segments: number) {
+  constructor(planetRadius: number, segments: number, nightPath?: string) {
     const radius = planetRadius * 1.001;
     const geometry = new THREE.SphereGeometry(radius, segments, segments);
 
@@ -60,17 +57,14 @@ export class NightLights implements IDisposable {
       depthWrite: false,
     });
 
-    const loader = new THREE.TextureLoader();
-    loader.load(
-      NIGHT_TEXTURE_PATH,
-      (tex) => {
+    if (nightPath) {
+      const loader = new THREE.TextureLoader();
+      loader.load(nightPath, (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = 8;
         material.uniforms.nightMap.value = tex;
-      },
-      undefined,
-      () => { /* 静默跳过 */ },
-    );
+      }, undefined, () => { /* 静默跳过 */ });
+    }
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'earth-nightlights';

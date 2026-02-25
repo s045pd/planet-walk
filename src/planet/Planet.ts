@@ -70,7 +70,10 @@ export class Planet implements IDisposable {
 
     // 地球特效：云层+夜景+海洋高光
     if (config.name === 'earth') {
-      this.earthEffects = new EarthEffects(config.radius, config.segments);
+      this.earthEffects = new EarthEffects(config.radius, config.segments, {
+        cloudsPath: config.textures.cloudsPath,
+        nightPath: config.textures.nightPath,
+      });
       this.root.add(this.earthEffects.root);
     }
   }
@@ -84,6 +87,9 @@ export class Planet implements IDisposable {
       this.config.textures.normalPath,
       this.config.textures.roughnessPath,
       this.config.textures.heightmapPath,
+      this.config.textures.nightPath,
+      this.config.textures.cloudsPath,
+      this.config.textures.specularPath,
     ].filter((p): p is string => !!p);
 
     if (paths.length === 0) {

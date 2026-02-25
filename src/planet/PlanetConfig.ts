@@ -8,6 +8,12 @@ export interface PlanetTextureConfig {
   roughnessPath?: string;
   /** 高度图路径 */
   heightmapPath?: string;
+  /** 夜间灯光贴图路径（地球） */
+  nightPath?: string;
+  /** 云层贴图路径（地球） */
+  cloudsPath?: string;
+  /** 海洋高光贴图路径（地球） */
+  specularPath?: string;
   /** 贴图未加载时的占位颜色 */
   fallbackColor: number;
 }

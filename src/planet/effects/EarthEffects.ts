@@ -4,9 +4,13 @@ import { CloudLayer } from './CloudLayer';
 import { NightLights } from './NightLights';
 import { OceanEffect } from './OceanEffect';
 
+export interface EarthEffectsConfig {
+  cloudsPath?: string;
+  nightPath?: string;
+}
+
 /**
  * 地球特效管理器 — 组合云层+夜景+海洋高光
- * 仅当 planetId === 'earth' 时激活
  */
 export class EarthEffects implements IDisposable {
   readonly root: THREE.Group;
@@ -14,12 +18,12 @@ export class EarthEffects implements IDisposable {
   private nightLights: NightLights;
   private ocean: OceanEffect;
 
-  constructor(planetRadius: number, segments: number) {
+  constructor(planetRadius: number, segments: number, config?: EarthEffectsConfig) {
     this.root = new THREE.Group();
     this.root.name = 'earth-effects';
 
-    this.clouds = new CloudLayer(planetRadius, segments);
-    this.nightLights = new NightLights(planetRadius, segments);
+    this.clouds = new CloudLayer(planetRadius, segments, config?.cloudsPath);
+    this.nightLights = new NightLights(planetRadius, segments, config?.nightPath);
     this.ocean = new OceanEffect(planetRadius, segments);
 
     this.root.add(this.clouds.mesh);

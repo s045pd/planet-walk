@@ -14,9 +14,8 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
     segments: 128,
     textures: {
       diffusePath: BASE + 'assets/textures/earth/diffuse.jpg',
-      normalPath: BASE + 'assets/textures/earth/normal.jpg',
-      roughnessPath: BASE + 'assets/textures/earth/roughness.jpg',
-      heightmapPath: BASE + 'assets/textures/earth/heightmap.png',
+      nightPath: BASE + 'assets/textures/earth/night.jpg',
+      cloudsPath: BASE + 'assets/textures/earth/clouds.jpg',
       fallbackColor: 0x2f6ca8,
     },
     atmosphere: {
@@ -41,14 +40,7 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
     gravity: MARS_GRAVITY,
     segments: 128,
     textures: {
-      // NASA Mars Global Surveyor / Viking global color mosaic
       diffusePath: BASE + 'assets/textures/mars/diffuse.jpg',
-      // MOLA-derived normal map for macro terrain details
-      normalPath: BASE + 'assets/textures/mars/normal.jpg',
-      // Derived roughness approximation for dusty surface response
-      roughnessPath: BASE + 'assets/textures/mars/roughness.jpg',
-      // MOLA global DEM heightmap
-      heightmapPath: BASE + 'assets/textures/mars/heightmap.png',
       fallbackColor: 0xb5603c,
     },
     atmosphere: {
@@ -75,14 +67,7 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
     gravity: MOON_GRAVITY,
     segments: 128,
     textures: {
-      // LRO/LOLA global albedo map
       diffusePath: BASE + 'assets/textures/moon/diffuse.jpg',
-      // Height-derived normal map emphasizing crater rims
-      normalPath: BASE + 'assets/textures/moon/normal.jpg',
-      // Approximate roughness map for regolith surface
-      roughnessPath: BASE + 'assets/textures/moon/roughness.jpg',
-      // LOLA global elevation model
-      heightmapPath: BASE + 'assets/textures/moon/heightmap.png',
       fallbackColor: 0x9a9a9a,
     },
     atmosphere: {
