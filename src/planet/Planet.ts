@@ -4,6 +4,7 @@ import type { PlanetConfig } from './PlanetConfig';
 import { TerrainMaterial } from './terrain/TerrainMaterial';
 import { Atmosphere } from './atmosphere/Atmosphere';
 import { EarthEffects } from './effects/EarthEffects';
+import { ProceduralTexture } from './ProceduralTexture';
 
 /** 星球基类：球体网格 + 纹理 + 可选大气层 */
 export class Planet implements IDisposable {
@@ -127,15 +128,40 @@ export class Planet implements IDisposable {
 
   private loadTexture(path: string | undefined, isColorMap: boolean): THREE.Texture | null {
     if (!path) {
-      return null;
+      return isColorMap ? this.getProceduralTexture() : null;
     }
 
-    const texture = this.textureLoader.load(path);
+    const texture = this.textureLoader.load(
+      path,
+      undefined,
+      undefined,
+      () => {
+        // 纹理加载失败，使用程序化纹理替代
+        if (isColorMap) {
+          const proc = this.getProceduralTexture();
+          if (proc && this.mesh.material instanceof THREE.MeshStandardMaterial) {
+            this.mesh.material.map = proc;
+            this.mesh.material.color.set(0xffffff);
+            this.mesh.material.needsUpdate = true;
+          }
+        }
+      },
+    );
     if (isColorMap) {
       texture.colorSpace = THREE.SRGBColorSpace;
     }
     texture.anisotropy = 8;
     return texture;
+  }
+
+  /** 获取当前星球的程序化纹理 */
+  private getProceduralTexture(): THREE.CanvasTexture | null {
+    switch (this.config.name) {
+      case 'earth': return ProceduralTexture.earth();
+      case 'mars': return ProceduralTexture.mars();
+      case 'moon': return ProceduralTexture.moon();
+      default: return null;
+    }
   }
 
   /** 每帧更新（地球特效等） */
