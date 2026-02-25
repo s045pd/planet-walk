@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { IDisposable } from '../core/types';
-import type { AtmosphereConfig, PlanetConfig } from './PlanetConfig';
+import type { PlanetConfig } from './PlanetConfig';
 import { TerrainMaterial } from './terrain/TerrainMaterial';
+import { Atmosphere } from './atmosphere/Atmosphere';
 
 /** 星球基类：球体网格 + 纹理 + 可选大气层 */
 export class Planet implements IDisposable {
@@ -9,7 +10,7 @@ export class Planet implements IDisposable {
   readonly root: THREE.Group;
   readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial | TerrainMaterial>;
 
-  private atmosphere?: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+  private atmosphere?: Atmosphere;
   private readonly textureLoader = new THREE.TextureLoader();
 
   constructor(config: PlanetConfig) {
@@ -62,8 +63,13 @@ export class Planet implements IDisposable {
     this.root.add(this.mesh);
 
     if (config.atmosphere?.enabled) {
-      this.atmosphere = this.createAtmosphere(config.radius, config.atmosphere);
-      this.root.add(this.atmosphere);
+      this.atmosphere = new Atmosphere(
+        config.radius,
+        config.segments,
+        config.atmosphere,
+        config.name,
+      );
+      this.root.add(this.atmosphere.mesh);
     }
   }
 
@@ -80,27 +86,12 @@ export class Planet implements IDisposable {
     return texture;
   }
 
-  private createAtmosphere(radius: number, atmosphere: AtmosphereConfig): THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial> {
-    const atmosphereRadius = radius * (1 + atmosphere.thickness);
-    const geometry = new THREE.SphereGeometry(atmosphereRadius, this.config.segments, this.config.segments);
-    const material = new THREE.MeshBasicMaterial({
-      color: atmosphere.color,
-      transparent: true,
-      opacity: atmosphere.opacity,
-      side: THREE.BackSide,
-      depthWrite: false,
-    });
-
-    return new THREE.Mesh(geometry, material);
-  }
-
   dispose(): void {
     this.mesh.geometry.dispose();
     this.mesh.material.dispose();
 
     if (this.atmosphere) {
-      this.atmosphere.geometry.dispose();
-      this.atmosphere.material.dispose();
+      this.atmosphere.dispose();
     }
   }
 }
