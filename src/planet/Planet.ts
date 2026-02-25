@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import type { IDisposable } from '../core/types';
 import type { AtmosphereConfig, PlanetConfig } from './PlanetConfig';
+import { TerrainMaterial } from './terrain/TerrainMaterial';
 
 /** 星球基类：球体网格 + 纹理 + 可选大气层 */
 export class Planet implements IDisposable {
   readonly config: PlanetConfig;
   readonly root: THREE.Group;
-  readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
+  readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial | TerrainMaterial>;
 
   private atmosphere?: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
   private readonly textureLoader = new THREE.TextureLoader();
@@ -17,27 +18,43 @@ export class Planet implements IDisposable {
     this.root.name = `${config.name}-root`;
 
     const geometry = new THREE.SphereGeometry(config.radius, config.segments, config.segments);
-    const material = new THREE.MeshStandardMaterial({
-      color: config.textures.fallbackColor,
-      roughness: 1,
-      metalness: 0,
-    });
-
+    
     const diffuseMap = this.loadTexture(config.textures.diffusePath, true);
-    if (diffuseMap) {
-      material.map = diffuseMap;
-      material.color.set(0xffffff);
-    }
+    const heightMap = this.loadTexture(config.textures.heightmapPath, false);
 
-    const normalMap = this.loadTexture(config.textures.normalPath, false);
-    if (normalMap) {
-      material.normalMap = normalMap;
-      material.normalScale.set(1, 1);
-    }
+    let material: THREE.MeshStandardMaterial | TerrainMaterial;
 
-    const roughnessMap = this.loadTexture(config.textures.roughnessPath, false);
-    if (roughnessMap) {
-      material.roughnessMap = roughnessMap;
+    if (heightMap && config.terrain) {
+      material = new TerrainMaterial({
+        diffuseMap: diffuseMap || new THREE.Texture(), // Should handle null better in production
+        heightMap: heightMap,
+        heightScale: config.terrain.heightScale,
+        color: new THREE.Color(config.textures.fallbackColor),
+      });
+    } else {
+      const standardMaterial = new THREE.MeshStandardMaterial({
+        color: config.textures.fallbackColor,
+        roughness: 1,
+        metalness: 0,
+      });
+
+      if (diffuseMap) {
+        standardMaterial.map = diffuseMap;
+        standardMaterial.color.set(0xffffff);
+      }
+
+      const normalMap = this.loadTexture(config.textures.normalPath, false);
+      if (normalMap) {
+        standardMaterial.normalMap = normalMap;
+        standardMaterial.normalScale.set(1, 1);
+      }
+
+      const roughnessMap = this.loadTexture(config.textures.roughnessPath, false);
+      if (roughnessMap) {
+        standardMaterial.roughnessMap = roughnessMap;
+      }
+      
+      material = standardMaterial;
     }
 
     this.mesh = new THREE.Mesh(geometry, material);

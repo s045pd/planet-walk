@@ -14,6 +14,7 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       diffusePath: '/assets/textures/earth/diffuse.jpg',
       normalPath: '/assets/textures/earth/normal.jpg',
       roughnessPath: '/assets/textures/earth/roughness.jpg',
+      heightmapPath: '/assets/textures/earth/heightmap.png',
       fallbackColor: 0x2f6ca8,
     },
     atmosphere: {
@@ -21,6 +22,11 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       color: 0x66aaff,
       thickness: 0.02,
       opacity: 0.15,
+    },
+    terrain: {
+      heightScale: 15,
+      maxLodLevel: 15,
+      tileResolution: 256,
     },
   },
   mars: {
@@ -32,6 +38,7 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       diffusePath: '/assets/textures/mars/diffuse.jpg',
       normalPath: '/assets/textures/mars/normal.jpg',
       roughnessPath: '/assets/textures/mars/roughness.jpg',
+      heightmapPath: '/assets/textures/mars/heightmap.png',
       fallbackColor: 0xb5603c,
     },
     atmosphere: {
@@ -39,6 +46,11 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       color: 0xffb27a,
       thickness: 0.015,
       opacity: 0.08,
+    },
+    terrain: {
+      heightScale: 10,
+      maxLodLevel: 12,
+      tileResolution: 256,
     },
   },
   moon: {
@@ -50,6 +62,7 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       diffusePath: '/assets/textures/moon/diffuse.jpg',
       normalPath: '/assets/textures/moon/normal.jpg',
       roughnessPath: '/assets/textures/moon/roughness.jpg',
+      heightmapPath: '/assets/textures/moon/heightmap.png',
       fallbackColor: 0x9a9a9a,
     },
     atmosphere: {
@@ -57,6 +70,11 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       color: 0xffffff,
       thickness: 0,
       opacity: 0,
+    },
+    terrain: {
+      heightScale: 8,
+      maxLodLevel: 12,
+      tileResolution: 256,
     },
   },
 };
