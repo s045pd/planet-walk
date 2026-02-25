@@ -15,6 +15,12 @@ import { CameraManager } from './camera/CameraManager';
 import { DebugPanel } from './ui/DebugPanel';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { PerformanceMonitor } from './core/PerformanceMonitor';
+import { AudioManager } from './audio/AudioManager';
+import { LandmarkManager } from './ui/LandmarkManager';
+import { MeteorEffect } from './effects/MeteorEffect';
+import { DustStorm } from './effects/DustStorm';
+import { MicroImpact } from './effects/MicroImpact';
+import type { ParticleSystem } from './effects/ParticleSystem';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -29,6 +35,9 @@ export class App implements IDisposable {
   private debugPanel: DebugPanel;
   private loadingScreen: LoadingScreen;
   private performanceMonitor: PerformanceMonitor;
+  private audioManager: AudioManager;
+  private landmarkManager: LandmarkManager;
+  private particleSystem: ParticleSystem | null = null;
   private clock = new THREE.Clock();
   private animationId = 0;
   private currentPlanet: PlanetType = 'earth';
@@ -76,6 +85,16 @@ export class App implements IDisposable {
     this.loadingScreen = new LoadingScreen();
     this.performanceMonitor = new PerformanceMonitor();
 
+    // 音效系统
+    this.audioManager = AudioManager.getInstance();
+
+    // 地标导航
+    this.landmarkManager = new LandmarkManager(this.cameraSystem.camera);
+    this.landmarkManager.loadPlanet(planet.config, planet.root);
+
+    // 粒子特效（按星球类型）
+    this.setupParticles(this.currentPlanet, planet.config.radius);
+
     window.addEventListener('resize', this.onResize);
   }
 
@@ -84,6 +103,32 @@ export class App implements IDisposable {
     this.cameraSystem.resize();
   };
 
+  /** 根据星球类型设置粒子特效 */
+  private setupParticles(planetType: PlanetType, radius: number): void {
+    // 清理旧粒子
+    if (this.particleSystem) {
+      this.sceneManager.scene.remove(this.particleSystem.mesh);
+      this.particleSystem.dispose();
+      this.particleSystem = null;
+    }
+
+    switch (planetType) {
+      case 'earth':
+        this.particleSystem = new MeteorEffect(radius);
+        break;
+      case 'mars':
+        this.particleSystem = new DustStorm(radius);
+        break;
+      case 'moon':
+        this.particleSystem = new MicroImpact(radius);
+        break;
+    }
+
+    if (this.particleSystem) {
+      this.sceneManager.scene.add(this.particleSystem.mesh);
+    }
+  }
+
   private switchPlanet = (planetType: PlanetType): void => {
     if (planetType === this.currentPlanet) {
       return;
@@ -91,12 +136,23 @@ export class App implements IDisposable {
 
     const nextPlanet = PlanetFactory.create(planetType);
     this.sceneManager.replacePlanet(nextPlanet);
+    this.planet = nextPlanet;
+
     this.playerController.switchPlanet({
       planetId: planetType,
       planetRadius: nextPlanet.config.radius,
       gravity: nextPlanet.config.gravity,
       surfaceMeshes: [nextPlanet.mesh],
     });
+
+    // 更新地标
+    this.landmarkManager.loadPlanet(nextPlanet.config, nextPlanet.root);
+
+    // 更新粒子特效
+    this.setupParticles(planetType, nextPlanet.config.radius);
+
+    // 切换环境音
+    this.audioManager.setPlanet(planetType);
 
     this.currentPlanet = planetType;
     this.planetSelector.setActive(planetType);
@@ -112,13 +168,32 @@ export class App implements IDisposable {
     await this.loadingScreen.hide();
     this.cameraManager.switchTo('orbit');
 
+    // 初始化音效（需要用户交互后）
+    const initAudio = (): void => {
+      this.audioManager.init();
+      this.audioManager.setPlanet(this.currentPlanet);
+      document.removeEventListener('click', initAudio);
+      document.removeEventListener('keydown', initAudio);
+    };
+    document.addEventListener('click', initAudio);
+    document.addEventListener('keydown', initAudio);
+
     this.clock.start();
     const loop = (): void => {
       this.animationId = requestAnimationFrame(loop);
       const delta = this.clock.getDelta();
       this.cameraManager.update(delta);
 
+      // 更新星球特效（云层/夜景/海洋）
+      this.planet.update(delta);
+
+      // 更新粒子特效
+      this.particleSystem?.update(delta);
+
+      // 更新地标可见性
       const cameraPosition = this.cameraSystem.camera.position;
+      this.landmarkManager.update(cameraPosition);
+
       const geo = cartesianToGeo(cameraPosition, this.sceneManager.planetRadius);
       this.hud.update({
         planetName: this.sceneManager.planetName,
@@ -150,6 +225,9 @@ export class App implements IDisposable {
     this.debugPanel.dispose();
     this.loadingScreen.dispose();
     this.planetSelector.dispose();
+    this.landmarkManager.dispose();
+    this.particleSystem?.dispose();
+    this.audioManager.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
   }
