@@ -3,8 +3,20 @@ import type { IUpdatable, IDisposable } from '../core/types';
 import type { InputManager } from '../core/InputManager';
 import { PlayerState } from './PlayerState';
 import { SphericalGravity } from './SphericalGravity';
-import { CollisionDetector } from './CollisionDetector';
 import { FirstPersonMode } from '../camera/FirstPersonMode';
+
+type TextureImageSource = CanvasImageSource & {
+  width?: number;
+  height?: number;
+  videoWidth?: number;
+  videoHeight?: number;
+};
+
+interface HeightTextureData {
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
+}
 
 /** 球面第一人称控制器配置 */
 export interface PlayerControllerConfig {
@@ -27,7 +39,6 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   private readonly input: InputManager;
   private readonly gravity: SphericalGravity;
-  private readonly collision: CollisionDetector;
   private surfaceMeshes: THREE.Object3D[];
   private readonly planetCenter: THREE.Vector3;
 
@@ -40,11 +51,32 @@ export class PlayerController implements IUpdatable, IDisposable {
   /** 空中阻力衰减系数 */
   private readonly airDrag = 0.98;
 
+  /** 角色与地表间距（脚底悬浮高度） */
+  private readonly playerHeight = 2;
+
+  /** 判定地面的阈值 */
+  private readonly groundSnapThreshold = 0.25;
+
+  /** 跟随地形高度时的最大贴地速度 */
+  private readonly terrainFollowSpeed = 28;
+
+  /** 地形检测射线长度（会按位移高度动态更新） */
+  private terrainProbeDistance = 24;
+
+  private readonly groundRaycaster = new THREE.Raycaster();
+  private readonly heightReadCanvas = document.createElement('canvas');
+  private readonly heightReadContext = this.heightReadCanvas.getContext('2d', {
+    willReadFrequently: true,
+  });
+  private readonly heightTextureCache = new WeakMap<THREE.Texture, HeightTextureData>();
+
   /** 复用临时向量 */
   private readonly _moveDir = new THREE.Vector3();
   private readonly _forward = new THREE.Vector3();
   private readonly _right = new THREE.Vector3();
   private readonly _surfaceDir = new THREE.Vector3();
+  private readonly _down = new THREE.Vector3();
+  private readonly _sampleUv = new THREE.Vector2();
   private readonly _worldUp = new THREE.Vector3(0, 1, 0);
 
   constructor(config: PlayerControllerConfig) {
@@ -64,8 +96,8 @@ export class PlayerController implements IUpdatable, IDisposable {
     });
 
     this.gravity = new SphericalGravity(this.planetCenter);
-    this.collision = new CollisionDetector(2);
     this.firstPerson = new FirstPersonMode(config.camera);
+    this.updateTerrainProbeDistance();
   }
 
   update(delta: number): void {
@@ -79,7 +111,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.handleJump();
     this.applyGravity(dt);
     this.applyVelocity(dt);
-    this.resolveCollision();
+    this.resolveTerrainCollision(dt);
     this.alignToSurface(dt);
     this.firstPerson.update(this.state);
   }
@@ -173,16 +205,151 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.state.velocity.addScaledVector(up, normalSpeed);
   }
 
-  private resolveCollision(): void {
-    this.collision.resolveGroundCollision(
-      this.state,
-      this.planetCenter,
-      this.surfaceMeshes,
-    );
+  private resolveTerrainCollision(dt: number): void {
+    this._down.copy(this.planetCenter).sub(this.state.position);
+    const distanceToCenter = this._down.length();
+    if (distanceToCenter < 1e-6) {
+      this.state.onGround = false;
+      return;
+    }
+    this._down.divideScalar(distanceToCenter);
+
+    this.groundRaycaster.set(this.state.position, this._down);
+    this.groundRaycaster.far = this.terrainProbeDistance;
+    const hit = this.groundRaycaster.intersectObjects(this.surfaceMeshes, true)[0];
+
+    if (!hit) {
+      this.state.onGround = false;
+      return;
+    }
+
+    const terrainDisplacement = this.getHitDisplacement(hit);
+    const terrainDistance = Math.max(0, hit.distance - terrainDisplacement);
+    const distanceError = terrainDistance - this.playerHeight;
+    const nearGround = terrainDistance <= this.playerHeight + this.groundSnapThreshold;
+    const downSpeed = this.state.velocity.dot(this._down);
+    const canSnapToGround = nearGround && downSpeed >= -0.05;
+
+    if (distanceError < 0 || canSnapToGround || this.state.onGround) {
+      const maxSnapDistance = this.terrainFollowSpeed * dt;
+      const correction = distanceError < 0
+        ? distanceError
+        : Math.min(distanceError, maxSnapDistance);
+      if (Math.abs(correction) > 1e-4) {
+        this.state.position.addScaledVector(this._down, correction);
+      }
+    }
+
+    if (canSnapToGround && downSpeed > 0) {
+      this.state.velocity.addScaledVector(this._down, -downSpeed);
+    }
+
+    this.state.onGround = canSnapToGround;
   }
 
   private alignToSurface(dt: number): void {
     this.gravity.alignToSurface(this.state, dt);
+  }
+
+  private getHitDisplacement(hit: THREE.Intersection): number {
+    if (!hit.uv) return 0;
+
+    const material = this.getMeshStandardMaterial(hit.object);
+    if (!material || !material.displacementMap) return 0;
+
+    const heightValue = this.sampleDisplacementValue(material.displacementMap, hit.uv);
+    return heightValue * material.displacementScale + material.displacementBias;
+  }
+
+  private sampleDisplacementValue(texture: THREE.Texture, uv: THREE.Vector2): number {
+    const textureData = this.getHeightTextureData(texture);
+    if (!textureData) return 0;
+
+    this._sampleUv.copy(uv);
+    texture.transformUv(this._sampleUv);
+
+    const x = Math.min(
+      textureData.width - 1,
+      Math.max(0, Math.floor(this._sampleUv.x * (textureData.width - 1))),
+    );
+    const y = Math.min(
+      textureData.height - 1,
+      Math.max(0, Math.floor(this._sampleUv.y * (textureData.height - 1))),
+    );
+
+    return textureData.data[(y * textureData.width + x) * 4] / 255;
+  }
+
+  private getHeightTextureData(texture: THREE.Texture): HeightTextureData | null {
+    const cached = this.heightTextureCache.get(texture);
+    if (cached) return cached;
+    if (!this.heightReadContext) return null;
+
+    const source = texture.image as TextureImageSource | undefined;
+    if (!source) return null;
+
+    const width = this.pickDimension(source.videoWidth, source.width);
+    const height = this.pickDimension(source.videoHeight, source.height);
+    if (width <= 0 || height <= 0) return null;
+
+    this.heightReadCanvas.width = width;
+    this.heightReadCanvas.height = height;
+
+    try {
+      this.heightReadContext.clearRect(0, 0, width, height);
+      this.heightReadContext.drawImage(source, 0, 0, width, height);
+    } catch {
+      return null;
+    }
+
+    const imageData = this.heightReadContext.getImageData(0, 0, width, height).data;
+    const textureData: HeightTextureData = {
+      width,
+      height,
+      data: new Uint8ClampedArray(imageData),
+    };
+    this.heightTextureCache.set(texture, textureData);
+    return textureData;
+  }
+
+  private pickDimension(primary?: number, fallback?: number): number {
+    if (typeof primary === 'number' && primary > 0) return primary;
+    if (typeof fallback === 'number' && fallback > 0) return fallback;
+    return 0;
+  }
+
+  private getMeshStandardMaterial(object: THREE.Object3D): THREE.MeshStandardMaterial | null {
+    if (!(object instanceof THREE.Mesh)) return null;
+
+    const { material } = object;
+    if (material instanceof THREE.MeshStandardMaterial) {
+      return material;
+    }
+    if (Array.isArray(material)) {
+      for (const mat of material) {
+        if (mat instanceof THREE.MeshStandardMaterial) {
+          return mat;
+        }
+      }
+    }
+    return null;
+  }
+
+  private updateTerrainProbeDistance(): void {
+    let maxDisplacement = 0;
+    for (const surface of this.surfaceMeshes) {
+      surface.traverse((object) => {
+        const material = this.getMeshStandardMaterial(object);
+        if (!material) return;
+        const displacementRange =
+          Math.abs(material.displacementScale) + Math.abs(material.displacementBias);
+        if (displacementRange > maxDisplacement) {
+          maxDisplacement = displacementRange;
+        }
+      });
+    }
+
+    this.terrainProbeDistance = this.playerHeight + maxDisplacement + 16;
   }
 
   switchPlanet(config: {
@@ -192,6 +359,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     surfaceMeshes: THREE.Object3D[];
   }): void {
     this.surfaceMeshes = config.surfaceMeshes;
+    this.updateTerrainProbeDistance();
     this.state.switchPlanet(config.planetId, {
       name: config.planetId,
       gravity: config.gravity,
