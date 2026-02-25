@@ -12,6 +12,7 @@ export class InputManager implements IDisposable {
 
   private _mouseDelta: MouseDelta = { x: 0, y: 0 };
   private _pointerLocked = false;
+  private _pointerLockEnabled = true;
   private _jumpRequested = false;
   private readonly _canvas: HTMLCanvasElement | null;
 
@@ -21,9 +22,7 @@ export class InputManager implements IDisposable {
     window.addEventListener('keyup', this.onKeyUp);
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('pointerlockchange', this.onPointerLockChange);
-    if (this._canvas) {
-      this._canvas.addEventListener('click', this.requestPointerLock);
-    }
+    this.bindPointerLockClick();
   }
 
   isPressed(code: string): boolean {
@@ -49,6 +48,23 @@ export class InputManager implements IDisposable {
 
   get pointerLocked(): boolean {
     return this._pointerLocked;
+  }
+
+  get pointerLockEnabled(): boolean {
+    return this._pointerLockEnabled;
+  }
+
+  setPointerLockEnabled(enabled: boolean): void {
+    if (this._pointerLockEnabled === enabled) {
+      return;
+    }
+    this._pointerLockEnabled = enabled;
+    this.bindPointerLockClick();
+    if (!enabled && this._pointerLocked) {
+      document.exitPointerLock();
+    }
+    this._mouseDelta.x = 0;
+    this._mouseDelta.y = 0;
   }
 
   /** 获取 WASD 移动方向 */
@@ -84,16 +100,23 @@ export class InputManager implements IDisposable {
   };
 
   private requestPointerLock = (): void => {
+    if (!this._pointerLockEnabled) return;
     this._canvas?.requestPointerLock();
   };
+
+  private bindPointerLockClick(): void {
+    if (!this._canvas) return;
+    this._canvas.removeEventListener('click', this.requestPointerLock);
+    if (this._pointerLockEnabled) {
+      this._canvas.addEventListener('click', this.requestPointerLock);
+    }
+  }
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('pointerlockchange', this.onPointerLockChange);
-    if (this._canvas) {
-      this._canvas.removeEventListener('click', this.requestPointerLock);
-    }
+    this._canvas?.removeEventListener('click', this.requestPointerLock);
   }
 }
