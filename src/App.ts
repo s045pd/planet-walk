@@ -24,6 +24,7 @@ import type { ParticleSystem } from './effects/ParticleSystem';
 import { GuidePanel } from './ui/GuidePanel';
 import { LandButton } from './ui/LandButton';
 import { Minimap } from './ui/Minimap';
+import { WeatherSystem } from './weather/WeatherSystem';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -44,6 +45,7 @@ export class App implements IDisposable {
   private guidePanel: GuidePanel;
   private landButton: LandButton;
   private minimap: Minimap;
+  private weatherSystem: WeatherSystem;
   private minimapFullscreen = false;
   private clock = new THREE.Clock();
   private animationId = 0;
@@ -121,6 +123,13 @@ export class App implements IDisposable {
     this.minimap.setPlanetRadius(planet.config.radius);
     this.minimap.setBackgroundColor(planet.config.textures.fallbackColor);
     this.minimap.setVisible(false);
+
+    // 天气系统
+    this.weatherSystem = new WeatherSystem({
+      scene: this.sceneManager.scene,
+      planetRadius: planet.config.radius,
+      weather: planet.config.weather,
+    });
 
     // ESC返回轨道
     window.addEventListener('keydown', this.onKeyDown);
@@ -246,6 +255,13 @@ export class App implements IDisposable {
     this.minimap.setPlanetRadius(nextPlanet.config.radius);
     this.minimap.setBackgroundColor(nextPlanet.config.textures.fallbackColor);
 
+    // 切换天气系统
+    this.weatherSystem.switchPlanet(
+      this.sceneManager.scene,
+      nextPlanet.config.radius,
+      nextPlanet.config.weather,
+    );
+
     // 更新粒子特效
     this.setupParticles(planetType, nextPlanet.config.radius);
 
@@ -319,6 +335,9 @@ export class App implements IDisposable {
       const cameraPosition = this.cameraSystem.camera.position;
       this.landmarkManager.update(cameraPosition);
 
+      // 更新天气系统
+      this.weatherSystem.update(delta, cameraPosition);
+
       const geo = cartesianToGeo(cameraPosition, this.sceneManager.planetRadius);
       this.hud.update({
         planetName: this.sceneManager.planetName,
@@ -357,6 +376,7 @@ export class App implements IDisposable {
     this.guidePanel.dispose();
     this.landButton.dispose();
     this.minimap.dispose();
+    this.weatherSystem.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
   }
