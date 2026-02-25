@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { Engine } from './core/Engine';
 import { SceneManager } from './core/Scene';
 import { CameraSystem } from './core/Camera';
@@ -6,6 +7,7 @@ import type { IDisposable } from './core/types';
 import { PlanetFactory } from './planet/PlanetFactory';
 import { cartesianToGeo } from './utils/geo';
 import { HUD } from './ui/HUD';
+import { PlayerController } from './player/PlayerController';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -14,6 +16,8 @@ export class App implements IDisposable {
   private cameraSystem: CameraSystem;
   private inputManager: InputManager;
   private hud: HUD;
+  private playerController: PlayerController;
+  private clock = new THREE.Clock();
   private animationId = 0;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -27,8 +31,16 @@ export class App implements IDisposable {
     const planet = PlanetFactory.createEarth();
     this.sceneManager = new SceneManager(planet);
     this.cameraSystem = new CameraSystem();
-    this.inputManager = new InputManager();
+    this.inputManager = new InputManager(canvas);
     this.hud = new HUD();
+
+    this.playerController = new PlayerController({
+      camera: this.cameraSystem.camera,
+      input: this.inputManager,
+      planetCenter: new THREE.Vector3(0, 0, 0),
+      planetRadius: planet.config.radius,
+      surfaceMeshes: [planet.mesh],
+    });
 
     window.addEventListener('resize', this.onResize);
   }
@@ -39,8 +51,12 @@ export class App implements IDisposable {
   };
 
   start(): void {
+    this.clock.start();
     const loop = (): void => {
       this.animationId = requestAnimationFrame(loop);
+      const delta = this.clock.getDelta();
+      this.playerController.update(delta);
+
       const cameraPosition = this.cameraSystem.camera.position;
       const geo = cartesianToGeo(cameraPosition, this.sceneManager.planetRadius);
       this.hud.update({
@@ -50,6 +66,7 @@ export class App implements IDisposable {
         alt: geo.alt,
         position: cameraPosition,
       });
+
       this.engine.render(this.sceneManager.scene, this.cameraSystem.camera);
     };
     loop();
@@ -58,6 +75,7 @@ export class App implements IDisposable {
   dispose(): void {
     cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', this.onResize);
+    this.playerController.dispose();
     this.inputManager.dispose();
     this.hud.dispose();
     this.sceneManager.dispose();
