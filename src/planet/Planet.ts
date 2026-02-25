@@ -73,6 +73,49 @@ export class Planet implements IDisposable {
     }
   }
 
+  /**
+   * 异步加载所有纹理，通过 onProgress 回调报告进度 (0-100)
+   */
+  loadTextures(onProgress?: (percent: number) => void): Promise<void> {
+    const paths = [
+      this.config.textures.diffusePath,
+      this.config.textures.normalPath,
+      this.config.textures.roughnessPath,
+      this.config.textures.heightmapPath,
+    ].filter((p): p is string => !!p);
+
+    if (paths.length === 0) {
+      onProgress?.(100);
+      return Promise.resolve();
+    }
+
+    let loaded = 0;
+    const total = paths.length;
+
+    const promises = paths.map(
+      (path) =>
+        new Promise<void>((resolve) => {
+          this.textureLoader.load(
+            path,
+            () => {
+              loaded++;
+              onProgress?.(Math.round((loaded / total) * 100));
+              resolve();
+            },
+            undefined,
+            () => {
+              // 纹理加载失败也算完成，不阻塞启动
+              loaded++;
+              onProgress?.(Math.round((loaded / total) * 100));
+              resolve();
+            },
+          );
+        }),
+    );
+
+    return Promise.all(promises).then(() => {});
+  }
+
   private loadTexture(path: string | undefined, isColorMap: boolean): THREE.Texture | null {
     if (!path) {
       return null;
