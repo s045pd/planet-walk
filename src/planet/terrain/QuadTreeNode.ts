@@ -34,6 +34,7 @@ export class QuadTreeNode {
 
   /** 节点中心在球面上的3D坐标（缓存） */
   private _center: THREE.Vector3 | null = null;
+  private _boundingSphere: THREE.Sphere | null = null;
 
   constructor(
     face: CubeFace,
@@ -61,6 +62,16 @@ export class QuadTreeNode {
       this._center = cubeToSphere(this.face, cx, cy, this.radius);
     }
     return this._center;
+  }
+
+  /** 获取节点的包围球 */
+  get boundingSphere(): THREE.Sphere {
+    if (!this._boundingSphere) {
+      // 粗略估算包围球半径：节点在球面上的弧长
+      const radius = this.bounds.size * this.radius; 
+      this._boundingSphere = new THREE.Sphere(this.center, radius);
+    }
+    return this._boundingSphere;
   }
 
   /** 判断是否为叶节点 */
