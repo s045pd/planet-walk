@@ -23,6 +23,7 @@ export class PlayerState {
 
   onGround = false;
   currentPlanet: string;
+  private gravityConfig: GravityConfig;
 
   constructor(initialPosition: THREE.Vector3, planet = 'earth') {
     this.position = initialPosition.clone();
@@ -30,18 +31,21 @@ export class PlayerState {
     this.quaternion = new THREE.Quaternion();
     this.up = new THREE.Vector3(0, 1, 0);
     this.currentPlanet = planet;
+    this.gravityConfig = PLANET_GRAVITY[planet] ?? PLANET_GRAVITY.earth;
   }
 
   /** 获取当前星球的重力配置 */
   getGravityConfig(): GravityConfig {
-    return PLANET_GRAVITY[this.currentPlanet] ?? PLANET_GRAVITY.earth;
+    return this.gravityConfig;
   }
 
   /** 切换星球 */
-  switchPlanet(planetId: string): void {
-    if (PLANET_GRAVITY[planetId]) {
-      this.currentPlanet = planetId;
-    }
+  switchPlanet(planetId: string, gravityConfig?: GravityConfig): void {
+    this.currentPlanet = planetId;
+    this.gravityConfig =
+      gravityConfig ??
+      PLANET_GRAVITY[planetId] ??
+      PLANET_GRAVITY.earth;
   }
 
   /** 重置速度 */

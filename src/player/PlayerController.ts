@@ -11,6 +11,7 @@ export interface PlayerControllerConfig {
   camera: THREE.PerspectiveCamera;
   input: InputManager;
   planetCenter: THREE.Vector3;
+  planetId?: string;
   planetRadius: number;
   surfaceMeshes: THREE.Object3D[];
   gravity?: number;
@@ -26,7 +27,7 @@ export class PlayerController implements IUpdatable, IDisposable {
   private readonly input: InputManager;
   private readonly gravity: SphericalGravity;
   private readonly collision: CollisionDetector;
-  private readonly surfaceMeshes: THREE.Object3D[];
+  private surfaceMeshes: THREE.Object3D[];
   private readonly planetCenter: THREE.Vector3;
 
   private moveSpeed: number;
@@ -42,6 +43,8 @@ export class PlayerController implements IUpdatable, IDisposable {
   private readonly _moveDir = new THREE.Vector3();
   private readonly _forward = new THREE.Vector3();
   private readonly _right = new THREE.Vector3();
+  private readonly _surfaceDir = new THREE.Vector3();
+  private readonly _worldUp = new THREE.Vector3(0, 1, 0);
 
   constructor(config: PlayerControllerConfig) {
     this.input = config.input;
@@ -52,7 +55,12 @@ export class PlayerController implements IUpdatable, IDisposable {
 
     // 初始位置：星球表面正上方
     const startPos = new THREE.Vector3(0, config.planetRadius + 2, 0);
-    this.state = new PlayerState(startPos);
+    this.state = new PlayerState(startPos, config.planetId ?? 'earth');
+    this.state.switchPlanet(config.planetId ?? 'earth', {
+      name: config.planetId ?? 'earth',
+      gravity: config.gravity ?? 9.81,
+      radius: config.planetRadius,
+    });
 
     this.gravity = new SphericalGravity(this.planetCenter);
     this.collision = new CollisionDetector(2);
@@ -149,6 +157,35 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   private alignToSurface(dt: number): void {
     this.gravity.alignToSurface(this.state, dt);
+  }
+
+  switchPlanet(config: {
+    planetId: string;
+    planetRadius: number;
+    gravity: number;
+    surfaceMeshes: THREE.Object3D[];
+  }): void {
+    this.surfaceMeshes = config.surfaceMeshes;
+    this.state.switchPlanet(config.planetId, {
+      name: config.planetId,
+      gravity: config.gravity,
+      radius: config.planetRadius,
+    });
+    this.state.resetVelocity();
+    this.state.onGround = false;
+
+    this._surfaceDir
+      .copy(this.state.position)
+      .sub(this.planetCenter);
+    if (this._surfaceDir.lengthSq() < 1e-8) {
+      this._surfaceDir.set(0, 1, 0);
+    } else {
+      this._surfaceDir.normalize();
+    }
+
+    this.state.position.copy(this._surfaceDir).multiplyScalar(config.planetRadius + 2);
+    this.state.up.copy(this._surfaceDir);
+    this.state.quaternion.setFromUnitVectors(this._worldUp, this._surfaceDir);
   }
 
   dispose(): void {
