@@ -18,6 +18,7 @@ export class InputManager implements IDisposable {
   readonly keys = new Set<string>();
 
   private _mouseDelta: MouseDelta = { x: 0, y: 0 };
+  private _wheelDelta = 0;
   private _pointerLocked = false;
   private _pointerLockEnabled: boolean;
   private _jumpRequested = false;
@@ -41,6 +42,7 @@ export class InputManager implements IDisposable {
     if (!this._isMobile) {
       document.addEventListener('mousemove', this.onMouseMove);
       document.addEventListener('pointerlockchange', this.onPointerLockChange);
+      window.addEventListener('wheel', this.onWheel, { passive: false });
       this.bindPointerLockClick();
     } else {
       this._virtualJoystick?.setActive(false);
@@ -71,6 +73,13 @@ export class InputManager implements IDisposable {
     }
     this._mouseDelta.x = 0;
     this._mouseDelta.y = 0;
+    return delta;
+  }
+
+  /** 获取并清零滚轮增量 */
+  consumeWheel(): number {
+    const delta = this._wheelDelta;
+    this._wheelDelta = 0;
     return delta;
   }
 
@@ -110,6 +119,7 @@ export class InputManager implements IDisposable {
     }
     this._mouseDelta.x = 0;
     this._mouseDelta.y = 0;
+    this._wheelDelta = 0;
   }
 
   /** 获取键盘+触控综合后的移动向量 */
@@ -163,6 +173,14 @@ export class InputManager implements IDisposable {
     this._pointerLocked = document.pointerLockElement === this._canvas;
   };
 
+  private onWheel = (e: WheelEvent): void => {
+    if (this._isMobile) return;
+    this._wheelDelta += e.deltaY;
+    if (this._pointerLockEnabled) {
+      e.preventDefault();
+    }
+  };
+
   private requestPointerLock = (): void => {
     if (this._isMobile) return;
     if (!this._pointerLockEnabled) return;
@@ -184,6 +202,7 @@ export class InputManager implements IDisposable {
     if (!this._isMobile) {
       document.removeEventListener('mousemove', this.onMouseMove);
       document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+      window.removeEventListener('wheel', this.onWheel);
     }
     this._canvas?.removeEventListener('click', this.requestPointerLock);
     this._touchManager?.dispose();

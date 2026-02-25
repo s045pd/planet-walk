@@ -44,6 +44,8 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   private moveSpeed: number;
   private jumpForce: number;
+  private _syncCameraInController = true;
+  private _mouseLookHandler: ((dx: number, dy: number) => void) | null = null;
 
   /** 地面摩擦衰减系数 */
   private readonly friction = 0.88;
@@ -97,6 +99,9 @@ export class PlayerController implements IUpdatable, IDisposable {
 
     this.gravity = new SphericalGravity(this.planetCenter);
     this.firstPerson = new FirstPersonMode(config.camera);
+    this._mouseLookHandler = (dx: number, dy: number): void => {
+      this.firstPerson.applyMouseDelta(dx, dy);
+    };
     this.updateTerrainProbeDistance();
   }
 
@@ -113,11 +118,21 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.applyVelocity(dt);
     this.resolveTerrainCollision(dt);
     this.alignToSurface(dt);
-    this.firstPerson.update(this.state);
+    if (this._syncCameraInController) {
+      this.firstPerson.update(this.state);
+    }
   }
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+  }
+
+  setMouseLookHandler(handler: ((dx: number, dy: number) => void) | null): void {
+    this._mouseLookHandler = handler;
+  }
+
+  setCameraSyncEnabled(enabled: boolean): void {
+    this._syncCameraInController = enabled;
   }
 
   /** 将玩家状态与当前相机位置同步，避免模式切换跳变 */
@@ -141,8 +156,8 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   private handleMouseLook(): void {
     const mouse = this.input.consumeMouseDelta();
-    if (mouse.x !== 0 || mouse.y !== 0) {
-      this.firstPerson.applyMouseDelta(mouse.x, mouse.y);
+    if ((mouse.x !== 0 || mouse.y !== 0) && this._mouseLookHandler) {
+      this._mouseLookHandler(mouse.x, mouse.y);
     }
   }
 
