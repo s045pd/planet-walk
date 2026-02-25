@@ -23,6 +23,7 @@ import { MicroImpact } from './effects/MicroImpact';
 import type { ParticleSystem } from './effects/ParticleSystem';
 import { GuidePanel } from './ui/GuidePanel';
 import { LandButton } from './ui/LandButton';
+import { Minimap } from './ui/Minimap';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -42,10 +43,18 @@ export class App implements IDisposable {
   private particleSystem: ParticleSystem | null = null;
   private guidePanel: GuidePanel;
   private landButton: LandButton;
+  private minimap: Minimap;
+  private minimapFullscreen = false;
   private clock = new THREE.Clock();
   private animationId = 0;
   private currentPlanet: PlanetType = 'earth';
   private planet: Planet;
+  private readonly headingForward = new THREE.Vector3();
+  private readonly headingEast = new THREE.Vector3();
+  private readonly headingNorth = new THREE.Vector3();
+  private readonly headingWorldForward = new THREE.Vector3(0, 0, -1);
+  private readonly headingWorldNorth = new THREE.Vector3(0, 1, 0);
+  private readonly headingFallbackNorth = new THREE.Vector3(0, 0, 1);
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new Engine({
@@ -107,6 +116,12 @@ export class App implements IDisposable {
     this.landButton = new LandButton();
     this.landButton.setOnClick(() => this.landOnSurface());
 
+    // 小地图
+    this.minimap = new Minimap();
+    this.minimap.setPlanetRadius(planet.config.radius);
+    this.minimap.setBackgroundColor(planet.config.textures.fallbackColor);
+    this.minimap.setVisible(false);
+
     // ESC返回轨道
     window.addEventListener('keydown', this.onKeyDown);
 
@@ -119,10 +134,44 @@ export class App implements IDisposable {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === 'KeyM' && !e.repeat) {
+      this.minimapFullscreen = !this.minimapFullscreen;
+      this.minimap.setFullscreen(this.minimapFullscreen);
+      return;
+    }
     if (e.key === 'Escape' && this.cameraManager.mode !== 'orbit') {
       this.returnToOrbit();
     }
   };
+
+  private computePlayerHeading(
+    quaternion: THREE.Quaternion,
+    up: THREE.Vector3,
+  ): number {
+    this.headingForward
+      .copy(this.headingWorldForward)
+      .applyQuaternion(quaternion);
+    this.headingForward.addScaledVector(up, -this.headingForward.dot(up));
+    if (this.headingForward.lengthSq() < 1e-8) {
+      return 0;
+    }
+    this.headingForward.normalize();
+
+    this.headingEast.crossVectors(this.headingWorldNorth, up);
+    if (this.headingEast.lengthSq() < 1e-8) {
+      this.headingEast.crossVectors(this.headingFallbackNorth, up);
+    }
+    if (this.headingEast.lengthSq() < 1e-8) {
+      return 0;
+    }
+    this.headingEast.normalize();
+
+    this.headingNorth.crossVectors(up, this.headingEast).normalize();
+    const east = this.headingForward.dot(this.headingEast);
+    const north = this.headingForward.dot(this.headingNorth);
+    const heading = Math.atan2(east, north) * (180 / Math.PI);
+    return (heading + 360) % 360;
+  }
 
   /** 降落到地表 */
   private landOnSurface(): void {
@@ -194,6 +243,8 @@ export class App implements IDisposable {
 
     // 更新地标
     this.landmarkManager.loadPlanet(nextPlanet.config, nextPlanet.root);
+    this.minimap.setPlanetRadius(nextPlanet.config.radius);
+    this.minimap.setBackgroundColor(nextPlanet.config.textures.fallbackColor);
 
     // 更新粒子特效
     this.setupParticles(planetType, nextPlanet.config.radius);
@@ -235,6 +286,28 @@ export class App implements IDisposable {
       this.animationId = requestAnimationFrame(loop);
       const delta = this.clock.getDelta();
       this.cameraManager.update(delta);
+
+      const inSurfaceMode =
+        this.cameraManager.mode === 'firstPerson' ||
+        this.cameraManager.mode === 'thirdPerson';
+      this.minimap.setVisible(inSurfaceMode);
+      if (inSurfaceMode) {
+        const playerState = this.playerController.state;
+        const playerGeo = cartesianToGeo(
+          playerState.position,
+          this.sceneManager.planetRadius,
+        );
+        const heading = this.computePlayerHeading(
+          playerState.quaternion,
+          playerState.up,
+        );
+        this.minimap.update(
+          playerGeo.lat,
+          playerGeo.lng,
+          heading,
+          this.planet.config.landmarks,
+        );
+      }
 
       // 更新星球特效（云层/夜景/海洋）
       this.planet.update(delta);
@@ -283,6 +356,7 @@ export class App implements IDisposable {
     this.audioManager.dispose();
     this.guidePanel.dispose();
     this.landButton.dispose();
+    this.minimap.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
   }
