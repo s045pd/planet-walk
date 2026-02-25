@@ -4,6 +4,7 @@ import type { PlanetConfig } from './PlanetConfig';
 import { Atmosphere } from './atmosphere/Atmosphere';
 import { EarthEffects } from './effects/EarthEffects';
 import { ProceduralTexture } from './ProceduralTexture';
+import { HeightmapGenerator } from './HeightmapGenerator';
 
 /** 星球基类：球体网格 + 纹理 + 可选大气层 */
 export class Planet implements IDisposable {
@@ -22,6 +23,7 @@ export class Planet implements IDisposable {
     this.root.name = `${config.name}-root`;
 
     const geometry = new THREE.SphereGeometry(config.radius, config.segments, config.segments);
+    const terrainHeightScale = config.terrain?.heightScale ?? 0;
 
     // 先用程序化纹理作为默认，外部纹理加载成功后再替换
     const proceduralMap = this.getProceduralTexture();
@@ -31,7 +33,13 @@ export class Planet implements IDisposable {
       map: proceduralMap,
       roughness: 1,
       metalness: 0,
+      displacementScale: terrainHeightScale,
+      displacementBias: terrainHeightScale > 0 ? -terrainHeightScale * 0.5 : 0,
     });
+
+    if (!config.textures.heightmapPath && proceduralMap) {
+      this.applyGeneratedHeightmap(standardMaterial, proceduralMap);
+    }
 
     // 异步加载外部纹理（成功则替换程序化纹理）
     if (config.textures.diffusePath) {
@@ -41,6 +49,9 @@ export class Planet implements IDisposable {
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = 8;
           standardMaterial.map = tex;
+          if (!config.textures.heightmapPath) {
+            this.applyGeneratedHeightmap(standardMaterial, tex);
+          }
           standardMaterial.needsUpdate = true;
         },
       );
@@ -52,6 +63,25 @@ export class Planet implements IDisposable {
         standardMaterial.normalScale.set(1, 1);
         standardMaterial.needsUpdate = true;
       });
+    }
+
+    if (config.textures.heightmapPath) {
+      this.textureLoader.load(
+        config.textures.heightmapPath,
+        (tex) => {
+          this.configureHeightTexture(tex);
+          standardMaterial.displacementMap = tex;
+          standardMaterial.needsUpdate = true;
+        },
+        undefined,
+        () => {
+          const diffuse = standardMaterial.map;
+          if (diffuse) {
+            this.applyGeneratedHeightmap(standardMaterial, diffuse);
+          }
+          standardMaterial.needsUpdate = true;
+        },
+      );
     }
 
     this.mesh = new THREE.Mesh(geometry, standardMaterial);
@@ -137,6 +167,21 @@ export class Planet implements IDisposable {
   /** 每帧更新（地球特效等） */
   update(delta: number): void {
     this.earthEffects?.update(delta, this.sunDirection);
+  }
+
+  private applyGeneratedHeightmap(
+    material: THREE.MeshStandardMaterial,
+    diffuseTexture: THREE.Texture,
+  ): void {
+    const generated = HeightmapGenerator.fromTexture(diffuseTexture);
+    if (!generated) return;
+    this.configureHeightTexture(generated);
+    material.displacementMap = generated;
+  }
+
+  private configureHeightTexture(texture: THREE.Texture): void {
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.anisotropy = 8;
   }
 
   dispose(): void {
