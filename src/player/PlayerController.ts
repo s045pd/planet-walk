@@ -23,6 +23,7 @@ export interface PlayerControllerConfig {
 export class PlayerController implements IUpdatable, IDisposable {
   readonly state: PlayerState;
   readonly firstPerson: FirstPersonMode;
+  enabled = true;
 
   private readonly input: InputManager;
   private readonly gravity: SphericalGravity;
@@ -68,6 +69,8 @@ export class PlayerController implements IUpdatable, IDisposable {
   }
 
   update(delta: number): void {
+    if (!this.enabled) return;
+
     // 限制 delta 防止大跳帧
     const dt = Math.min(delta, 0.05);
 
@@ -78,6 +81,29 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.applyVelocity(dt);
     this.resolveCollision();
     this.alignToSurface(dt);
+    this.firstPerson.update(this.state);
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+
+  /** 将玩家状态与当前相机位置同步，避免模式切换跳变 */
+  syncToCamera(cameraPosition: THREE.Vector3, planetCenter: THREE.Vector3): void {
+    this._surfaceDir.copy(cameraPosition).sub(planetCenter);
+    if (this._surfaceDir.lengthSq() < 1e-8) {
+      this._surfaceDir.set(0, 1, 0);
+    } else {
+      this._surfaceDir.normalize();
+    }
+
+    this.state.up.copy(this._surfaceDir);
+    this.state.position
+      .copy(cameraPosition)
+      .addScaledVector(this._surfaceDir, -this.firstPerson.eyeHeight);
+    this.state.quaternion.setFromUnitVectors(this._worldUp, this._surfaceDir);
+    this.state.resetVelocity();
+    this.state.onGround = false;
     this.firstPerson.update(this.state);
   }
 
