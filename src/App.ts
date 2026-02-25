@@ -81,6 +81,7 @@ export class App implements IDisposable {
       domElement: canvas,
       input: this.inputManager,
       playerController: this.playerController,
+      scene: this.sceneManager.scene,
       getPlanetRadius: () => this.sceneManager.planetRadius,
       planetCenter: new THREE.Vector3(0, 0, 0),
     });
@@ -118,7 +119,7 @@ export class App implements IDisposable {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && this.cameraManager.mode === 'firstPerson') {
+    if (e.key === 'Escape' && this.cameraManager.mode !== 'orbit') {
       this.returnToOrbit();
     }
   };

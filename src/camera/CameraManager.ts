@@ -2,16 +2,19 @@ import * as THREE from 'three';
 import type { IDisposable, IUpdatable } from '../core/types';
 import type { InputManager } from '../core/InputManager';
 import type { PlayerController } from '../player/PlayerController';
+import { AstronautModel } from '../player/AstronautModel';
 import { OrbitMode } from './OrbitMode';
+import { ThirdPersonMode } from './ThirdPersonMode';
 import { TransitionController } from './TransitionController';
 
-export type CameraMode = 'orbit' | 'firstPerson';
+export type CameraMode = 'orbit' | 'firstPerson' | 'thirdPerson';
 
 export interface CameraManagerConfig {
   camera: THREE.PerspectiveCamera;
   domElement: HTMLCanvasElement;
   input: InputManager;
   playerController: PlayerController;
+  scene: THREE.Scene;
   getPlanetRadius: () => number;
   planetCenter?: THREE.Vector3;
   orbitMinAltitude?: number;
@@ -24,7 +27,9 @@ export interface CameraManagerConfig {
 export class CameraManager implements IUpdatable, IDisposable {
   readonly camera: THREE.PerspectiveCamera;
   readonly orbitMode: OrbitMode;
+  readonly thirdPersonMode: ThirdPersonMode;
   readonly transitionController: TransitionController;
+  readonly astronautModel: AstronautModel;
 
   private readonly _input: InputManager;
   private readonly _playerController: PlayerController;
@@ -38,6 +43,14 @@ export class CameraManager implements IUpdatable, IDisposable {
 
   private _mode: CameraMode = 'orbit';
   private _isTransitioning = false;
+
+  private readonly _firstPersonLookHandler = (dx: number, dy: number): void => {
+    this._playerController.firstPerson.applyMouseDelta(dx, dy);
+  };
+
+  private readonly _thirdPersonLookHandler = (dx: number, dy: number): void => {
+    this.thirdPersonMode.applyMouseDelta(dx, dy);
+  };
 
   constructor(config: CameraManagerConfig) {
     this.camera = config.camera;
@@ -59,6 +72,9 @@ export class CameraManager implements IUpdatable, IDisposable {
       domElement: config.domElement,
       target: this._planetCenter,
     });
+    this.thirdPersonMode = new ThirdPersonMode(this.camera);
+    this.astronautModel = new AstronautModel();
+    config.scene.add(this.astronautModel.root);
 
     this.transitionController = new TransitionController({
       camera: this.camera,
@@ -69,6 +85,7 @@ export class CameraManager implements IUpdatable, IDisposable {
     });
 
     this.applyOrbitDistanceLimits();
+    window.addEventListener('keydown', this.onKeyDown);
     this.switchTo('orbit');
   }
 
@@ -83,30 +100,58 @@ export class CameraManager implements IUpdatable, IDisposable {
 
     if (mode === 'orbit') {
       this._mode = 'orbit';
+      this._playerController.setMouseLookHandler(null);
+      this._playerController.setCameraSyncEnabled(false);
       this._playerController.setEnabled(false);
       this._input.setPointerLockEnabled(false);
+      this.astronautModel.setVisible(false);
       this.orbitMode.syncFromCamera();
       this.orbitMode.setEnabled(true);
       return;
     }
 
-    this._mode = 'firstPerson';
+    if (this._mode === 'orbit') {
+      this._playerController.syncToCamera(this.camera.position, this._planetCenter);
+    }
+
+    this._mode = mode;
     this.orbitMode.setEnabled(false);
-    this._playerController.syncToCamera(this.camera.position, this._planetCenter);
     this._playerController.setEnabled(true);
     this._input.setPointerLockEnabled(true);
+
+    if (mode === 'thirdPerson') {
+      this._playerController.setMouseLookHandler(this._thirdPersonLookHandler);
+      this._playerController.setCameraSyncEnabled(false);
+      this.astronautModel.setVisible(true);
+      this.thirdPersonMode.update(this._playerController.state);
+      return;
+    }
+
+    this._playerController.setMouseLookHandler(this._firstPersonLookHandler);
+    this._playerController.setCameraSyncEnabled(true);
+    this.astronautModel.setVisible(false);
   }
 
   update(delta: number): void {
     this.applyOrbitDistanceLimits();
+    const wheelDelta = this._input.consumeWheel();
     if (this._isTransitioning) {
       return;
     }
 
     if (this._mode === 'orbit') {
       this.orbitMode.update(delta);
+    } else if (this._mode === 'firstPerson') {
+      this._playerController.update(delta);
     } else {
       this._playerController.update(delta);
+      if (wheelDelta !== 0) {
+        this.thirdPersonMode.applyZoom(wheelDelta);
+      }
+      this.thirdPersonMode.update(this._playerController.state);
+      const movementAxis = this._input.getMovementAxis();
+      const isMoving = Math.abs(movementAxis.forward) > 1e-4 || Math.abs(movementAxis.right) > 1e-4;
+      this.astronautModel.update(this._playerController.state, isMoving);
     }
 
     this.autoSwitchByAltitude();
@@ -141,17 +186,35 @@ export class CameraManager implements IUpdatable, IDisposable {
       this.switchTo('firstPerson');
       return;
     }
-    if (this._mode === 'firstPerson' && altitude >= this._autoEnterOrbitAltitude) {
+    if (
+      (this._mode === 'firstPerson' || this._mode === 'thirdPerson') &&
+      altitude >= this._autoEnterOrbitAltitude
+    ) {
       this.switchTo('orbit');
     }
   }
+
+  private onKeyDown = (event: KeyboardEvent): void => {
+    if (event.code !== 'KeyV' || event.repeat || this._isTransitioning) {
+      return;
+    }
+    if (this._mode === 'firstPerson') {
+      this.switchTo('thirdPerson');
+      return;
+    }
+    if (this._mode === 'thirdPerson') {
+      this.switchTo('firstPerson');
+    }
+  };
 
   private getCameraAltitude(): number {
     return this.camera.position.distanceTo(this._planetCenter) - this._getPlanetRadius();
   }
 
   dispose(): void {
+    window.removeEventListener('keydown', this.onKeyDown);
     this.orbitMode.dispose();
+    this.astronautModel.dispose();
     this.transitionController.dispose();
   }
 }
