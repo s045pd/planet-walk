@@ -4,6 +4,8 @@ import type { PlanetConfig } from './PlanetConfig';
 
 export type PlanetType = 'earth' | 'mars' | 'moon';
 
+const BASE = import.meta.env.BASE_URL;
+
 const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
   earth: {
     name: 'earth',
@@ -11,10 +13,10 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
     gravity: EARTH_GRAVITY,
     segments: 128,
     textures: {
-      diffusePath: '/assets/textures/earth/diffuse.jpg',
-      normalPath: '/assets/textures/earth/normal.jpg',
-      roughnessPath: '/assets/textures/earth/roughness.jpg',
-      heightmapPath: '/assets/textures/earth/heightmap.png',
+      diffusePath: BASE + 'assets/textures/earth/diffuse.jpg',
+      normalPath: BASE + 'assets/textures/earth/normal.jpg',
+      roughnessPath: BASE + 'assets/textures/earth/roughness.jpg',
+      heightmapPath: BASE + 'assets/textures/earth/heightmap.png',
       fallbackColor: 0x2f6ca8,
     },
     atmosphere: {
@@ -40,13 +42,13 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
     segments: 128,
     textures: {
       // NASA Mars Global Surveyor / Viking global color mosaic
-      diffusePath: '/assets/textures/mars/diffuse.jpg',
+      diffusePath: BASE + 'assets/textures/mars/diffuse.jpg',
       // MOLA-derived normal map for macro terrain details
-      normalPath: '/assets/textures/mars/normal.jpg',
+      normalPath: BASE + 'assets/textures/mars/normal.jpg',
       // Derived roughness approximation for dusty surface response
-      roughnessPath: '/assets/textures/mars/roughness.jpg',
+      roughnessPath: BASE + 'assets/textures/mars/roughness.jpg',
       // MOLA global DEM heightmap
-      heightmapPath: '/assets/textures/mars/heightmap.png',
+      heightmapPath: BASE + 'assets/textures/mars/heightmap.png',
       fallbackColor: 0xb5603c,
     },
     atmosphere: {
@@ -74,13 +76,13 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
     segments: 128,
     textures: {
       // LRO/LOLA global albedo map
-      diffusePath: '/assets/textures/moon/diffuse.jpg',
+      diffusePath: BASE + 'assets/textures/moon/diffuse.jpg',
       // Height-derived normal map emphasizing crater rims
-      normalPath: '/assets/textures/moon/normal.jpg',
+      normalPath: BASE + 'assets/textures/moon/normal.jpg',
       // Approximate roughness map for regolith surface
-      roughnessPath: '/assets/textures/moon/roughness.jpg',
+      roughnessPath: BASE + 'assets/textures/moon/roughness.jpg',
       // LOLA global elevation model
-      heightmapPath: '/assets/textures/moon/heightmap.png',
+      heightmapPath: BASE + 'assets/textures/moon/heightmap.png',
       fallbackColor: 0x9a9a9a,
     },
     atmosphere: {

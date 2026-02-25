@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import type { IDisposable } from '../../core/types';
 
-const CLOUD_TEXTURE_PATH = '/assets/textures/earth/clouds.jpg';
-const CLOUD_ALPHA_PATH = '/assets/textures/earth/clouds_alpha.jpg';
+const BASE = import.meta.env.BASE_URL;
+const CLOUD_TEXTURE_PATH = BASE + 'assets/textures/earth/clouds.jpg';
+const CLOUD_ALPHA_PATH = BASE + 'assets/textures/earth/clouds_alpha.jpg';
 
 /**
  * 云层效果 — 半透明球壳，独立于星球缓慢自转

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { IDisposable } from '../../core/types';
 
-const NIGHT_TEXTURE_PATH = '/assets/textures/earth/night.jpg';
+const BASE = import.meta.env.BASE_URL;
+const NIGHT_TEXTURE_PATH = BASE + 'assets/textures/earth/night.jpg';
 
 const vertexShader = /* glsl */ `
 varying vec3 vNormal;

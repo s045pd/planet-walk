@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { IDisposable } from '../../core/types';
 
-const OCEAN_MASK_PATH = '/assets/textures/earth/ocean_mask.jpg';
+const BASE = import.meta.env.BASE_URL;
+const OCEAN_MASK_PATH = BASE + 'assets/textures/earth/ocean_mask.jpg';
 
 const vertexShader = /* glsl */ `
 varying vec3 vNormal;

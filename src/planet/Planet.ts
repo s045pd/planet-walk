@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import type { IDisposable } from '../core/types';
 import type { PlanetConfig } from './PlanetConfig';
-import { TerrainMaterial } from './terrain/TerrainMaterial';
 import { Atmosphere } from './atmosphere/Atmosphere';
 import { EarthEffects } from './effects/EarthEffects';
 import { ProceduralTexture } from './ProceduralTexture';
@@ -10,7 +9,7 @@ import { ProceduralTexture } from './ProceduralTexture';
 export class Planet implements IDisposable {
   readonly config: PlanetConfig;
   readonly root: THREE.Group;
-  readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial | TerrainMaterial>;
+  readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
 
   private atmosphere?: Atmosphere;
   private earthEffects?: EarthEffects;
@@ -23,46 +22,39 @@ export class Planet implements IDisposable {
     this.root.name = `${config.name}-root`;
 
     const geometry = new THREE.SphereGeometry(config.radius, config.segments, config.segments);
-    
-    const diffuseMap = this.loadTexture(config.textures.diffusePath, true);
-    const heightMap = this.loadTexture(config.textures.heightmapPath, false);
 
-    let material: THREE.MeshStandardMaterial | TerrainMaterial;
+    // 先用程序化纹理作为默认，外部纹理加载成功后再替换
+    const proceduralMap = this.getProceduralTexture();
 
-    if (heightMap && config.terrain) {
-      material = new TerrainMaterial({
-        diffuseMap: diffuseMap || new THREE.Texture(), // Should handle null better in production
-        heightMap: heightMap,
-        heightScale: config.terrain.heightScale,
-        color: new THREE.Color(config.textures.fallbackColor),
-      });
-    } else {
-      const standardMaterial = new THREE.MeshStandardMaterial({
-        color: config.textures.fallbackColor,
-        roughness: 1,
-        metalness: 0,
-      });
+    const standardMaterial = new THREE.MeshStandardMaterial({
+      color: proceduralMap ? 0xffffff : config.textures.fallbackColor,
+      map: proceduralMap,
+      roughness: 1,
+      metalness: 0,
+    });
 
-      if (diffuseMap) {
-        standardMaterial.map = diffuseMap;
-        standardMaterial.color.set(0xffffff);
-      }
-
-      const normalMap = this.loadTexture(config.textures.normalPath, false);
-      if (normalMap) {
-        standardMaterial.normalMap = normalMap;
-        standardMaterial.normalScale.set(1, 1);
-      }
-
-      const roughnessMap = this.loadTexture(config.textures.roughnessPath, false);
-      if (roughnessMap) {
-        standardMaterial.roughnessMap = roughnessMap;
-      }
-      
-      material = standardMaterial;
+    // 异步加载外部纹理（成功则替换程序化纹理）
+    if (config.textures.diffusePath) {
+      this.textureLoader.load(
+        config.textures.diffusePath,
+        (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.anisotropy = 8;
+          standardMaterial.map = tex;
+          standardMaterial.needsUpdate = true;
+        },
+      );
     }
 
-    this.mesh = new THREE.Mesh(geometry, material);
+    if (config.textures.normalPath) {
+      this.textureLoader.load(config.textures.normalPath, (tex) => {
+        standardMaterial.normalMap = tex;
+        standardMaterial.normalScale.set(1, 1);
+        standardMaterial.needsUpdate = true;
+      });
+    }
+
+    this.mesh = new THREE.Mesh(geometry, standardMaterial);
     this.mesh.name = config.name;
     this.root.add(this.mesh);
 
@@ -124,34 +116,6 @@ export class Planet implements IDisposable {
     );
 
     return Promise.all(promises).then(() => {});
-  }
-
-  private loadTexture(path: string | undefined, isColorMap: boolean): THREE.Texture | null {
-    if (!path) {
-      return isColorMap ? this.getProceduralTexture() : null;
-    }
-
-    const texture = this.textureLoader.load(
-      path,
-      undefined,
-      undefined,
-      () => {
-        // 纹理加载失败，使用程序化纹理替代
-        if (isColorMap) {
-          const proc = this.getProceduralTexture();
-          if (proc && this.mesh.material instanceof THREE.MeshStandardMaterial) {
-            this.mesh.material.map = proc;
-            this.mesh.material.color.set(0xffffff);
-            this.mesh.material.needsUpdate = true;
-          }
-        }
-      },
-    );
-    if (isColorMap) {
-      texture.colorSpace = THREE.SRGBColorSpace;
-    }
-    texture.anisotropy = 8;
-    return texture;
   }
 
   /** 获取当前星球的程序化纹理 */
