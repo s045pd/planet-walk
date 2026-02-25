@@ -1,30 +1,25 @@
 import * as THREE from 'three';
 import type { IDisposable } from './types';
 import { EARTH_RADIUS, STAR_COUNT } from '../utils/constants';
+import { Planet } from '../planet/Planet';
 
-/** 场景管理：地球球体 + 星空粒子背景 */
+/** 场景管理：星球实体 + 星空粒子背景 */
 export class SceneManager implements IDisposable {
   readonly scene: THREE.Scene;
 
-  private earth!: THREE.Mesh;
+  private readonly planet: Planet;
   private stars!: THREE.Points;
 
-  constructor() {
+  constructor(planet: Planet) {
+    this.planet = planet;
     this.scene = new THREE.Scene();
-    this.createEarth();
+    this.addPlanet();
     this.createStars();
     this.createLights();
   }
 
-  private createEarth(): void {
-    const geometry = new THREE.SphereGeometry(EARTH_RADIUS, 64, 64);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x2266aa,
-      roughness: 0.8,
-      metalness: 0.1,
-    });
-    this.earth = new THREE.Mesh(geometry, material);
-    this.scene.add(this.earth);
+  private addPlanet(): void {
+    this.scene.add(this.planet.root);
   }
 
   private createStars(): void {
@@ -61,8 +56,7 @@ export class SceneManager implements IDisposable {
   }
 
   dispose(): void {
-    this.earth.geometry.dispose();
-    (this.earth.material as THREE.Material).dispose();
+    this.planet.dispose();
     this.stars.geometry.dispose();
     (this.stars.material as THREE.Material).dispose();
   }

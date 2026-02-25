@@ -3,6 +3,7 @@ import { SceneManager } from './core/Scene';
 import { CameraSystem } from './core/Camera';
 import { InputManager } from './core/InputManager';
 import type { IDisposable } from './core/types';
+import { PlanetFactory } from './planet/PlanetFactory';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -20,7 +21,8 @@ export class App implements IDisposable {
       pixelRatio: Math.min(window.devicePixelRatio, 2),
     });
 
-    this.sceneManager = new SceneManager();
+    const planet = PlanetFactory.createEarth();
+    this.sceneManager = new SceneManager(planet);
     this.cameraSystem = new CameraSystem();
     this.inputManager = new InputManager();
 
