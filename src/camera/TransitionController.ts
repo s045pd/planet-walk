@@ -80,7 +80,8 @@ export class TransitionController implements IDisposable {
           this._rafId = 0;
           this._activeResolve = null;
           this.camera.position.copy(this._surface);
-          this.camera.lookAt(this._planetCenter);
+          // 降落完成后看向地平线方向，而不是球心
+          this.lookAtHorizon();
           resolve();
         }
       };
@@ -93,6 +94,20 @@ export class TransitionController implements IDisposable {
     return t < 0.5
       ? 4 * t * t * t
       : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  /** 降落后让相机看向地平线方向 */
+  private lookAtHorizon(): void {
+    const up = this._normal.clone();
+    // 找一个不平行于up的参考向量
+    const ref = Math.abs(up.y) < 0.9
+      ? new THREE.Vector3(0, 1, 0)
+      : new THREE.Vector3(1, 0, 0);
+    // 切平面上的前方方向
+    const forward = new THREE.Vector3().crossVectors(up, ref).normalize();
+    const target = this.camera.position.clone().add(forward);
+    this.camera.up.copy(up);
+    this.camera.lookAt(target);
   }
 
   private cancelCurrentAnimation(): void {
