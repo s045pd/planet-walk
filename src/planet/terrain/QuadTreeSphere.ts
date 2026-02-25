@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { IDisposable } from '../../core/types';
 import { QuadTreeNode, CubeFace } from './QuadTreeNode';
 import { TilePool } from './TilePool';
+import { FrustumCuller } from '../../core/FrustumCuller';
 
 export interface QuadTreeSphereConfig {
   radius: number;
@@ -21,6 +22,7 @@ export class QuadTreeSphere implements IDisposable {
   private readonly tilePool: TilePool;
   private readonly maxLevel: number;
   private readonly splitFactor: number;
+  private readonly frustumCuller: FrustumCuller;
 
   constructor(config: QuadTreeSphereConfig) {
     this.root = new THREE.Group();
@@ -29,6 +31,7 @@ export class QuadTreeSphere implements IDisposable {
     this.splitFactor = config.splitFactor ?? 2.0;
 
     this.tilePool = new TilePool(config.material, config.tileResolution);
+    this.frustumCuller = new FrustumCuller();
 
     // 创建6个根面节点
     const allFaces = [
@@ -53,7 +56,10 @@ export class QuadTreeSphere implements IDisposable {
   }
 
   /** 每帧调用：根据相机位置更新四叉树LOD */
-  update(cameraPosition: THREE.Vector3): void {
+  update(camera: THREE.Camera): void {
+    this.frustumCuller.update(camera);
+    const cameraPosition = camera.position;
+
     for (const face of this.faces) {
       this.updateNode(face, cameraPosition);
     }
@@ -61,6 +67,24 @@ export class QuadTreeSphere implements IDisposable {
 
   /** 递归更新节点：决定split或merge */
   private updateNode(node: QuadTreeNode, cameraPos: THREE.Vector3): void {
+    // Frustum Culling
+    const isVisible = this.frustumCuller.intersectsSphere(
+      node.boundingSphere.center,
+      node.boundingSphere.radius
+    );
+
+    if (node.mesh) {
+      node.mesh.visible = isVisible;
+    }
+
+    if (!isVisible) {
+      // 如果节点不可见，隐藏所有子节点并停止递归更新
+      if (node.children) {
+        this.setVisibleRecursive(node, false);
+      }
+      return;
+    }
+
     if (node.isLeaf) {
       if (
         node.level < this.maxLevel &&
@@ -87,6 +111,17 @@ export class QuadTreeSphere implements IDisposable {
         for (const child of node.children!) {
           this.updateNode(child, cameraPos);
         }
+      }
+    }
+  }
+
+  private setVisibleRecursive(node: QuadTreeNode, visible: boolean): void {
+    if (node.mesh) {
+      node.mesh.visible = visible;
+    }
+    if (node.children) {
+      for (const child of node.children) {
+        this.setVisibleRecursive(child, visible);
       }
     }
   }
