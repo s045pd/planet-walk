@@ -21,6 +21,8 @@ import { MeteorEffect } from './effects/MeteorEffect';
 import { DustStorm } from './effects/DustStorm';
 import { MicroImpact } from './effects/MicroImpact';
 import type { ParticleSystem } from './effects/ParticleSystem';
+import { GuidePanel } from './ui/GuidePanel';
+import { LandButton } from './ui/LandButton';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -38,6 +40,8 @@ export class App implements IDisposable {
   private audioManager: AudioManager;
   private landmarkManager: LandmarkManager;
   private particleSystem: ParticleSystem | null = null;
+  private guidePanel: GuidePanel;
+  private landButton: LandButton;
   private clock = new THREE.Clock();
   private animationId = 0;
   private currentPlanet: PlanetType = 'earth';
@@ -95,6 +99,16 @@ export class App implements IDisposable {
     // 粒子特效（按星球类型）
     this.setupParticles(this.currentPlanet, planet.config.radius);
 
+    // 操作引导
+    this.guidePanel = new GuidePanel();
+
+    // 降落按钮
+    this.landButton = new LandButton();
+    this.landButton.setOnClick(() => this.landOnSurface());
+
+    // ESC返回轨道
+    window.addEventListener('keydown', this.onKeyDown);
+
     window.addEventListener('resize', this.onResize);
   }
 
@@ -102,6 +116,32 @@ export class App implements IDisposable {
     this.engine.resize();
     this.cameraSystem.resize();
   };
+
+  private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && this.cameraManager.mode === 'firstPerson') {
+      this.returnToOrbit();
+    }
+  };
+
+  /** 降落到地表 */
+  private landOnSurface(): void {
+    this.landButton.hide();
+    this.guidePanel.fadeOut();
+    // 使用第一个地标的坐标，或默认位置
+    const landmarks = this.planet.config.landmarks;
+    const lat = landmarks.length > 0 ? landmarks[0].lat : 0;
+    const lng = landmarks.length > 0 ? landmarks[0].lng : 0;
+    this.cameraManager.animateToSurface(lat, lng, 2500).then(() => {
+      this.guidePanel.showFirstPersonGuide();
+    });
+  }
+
+  /** 返回轨道视角 */
+  private returnToOrbit(): void {
+    this.cameraManager.switchTo('orbit');
+    this.landButton.show();
+    this.guidePanel.showOrbitGuide();
+  }
 
   /** 根据星球类型设置粒子特效 */
   private setupParticles(planetType: PlanetType, radius: number): void {
@@ -156,6 +196,9 @@ export class App implements IDisposable {
 
     this.currentPlanet = planetType;
     this.planetSelector.setActive(planetType);
+
+    // 切换星球后回到轨道模式
+    this.returnToOrbit();
   };
 
   async start(): Promise<void> {
@@ -167,6 +210,8 @@ export class App implements IDisposable {
 
     await this.loadingScreen.hide();
     this.cameraManager.switchTo('orbit');
+    this.guidePanel.showOrbitGuide();
+    this.landButton.show();
 
     // 初始化音效（需要用户交互后）
     const initAudio = (): void => {
@@ -218,6 +263,7 @@ export class App implements IDisposable {
   dispose(): void {
     cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('keydown', this.onKeyDown);
     this.cameraManager.dispose();
     this.playerController.dispose();
     this.inputManager.dispose();
@@ -228,6 +274,8 @@ export class App implements IDisposable {
     this.landmarkManager.dispose();
     this.particleSystem?.dispose();
     this.audioManager.dispose();
+    this.guidePanel.dispose();
+    this.landButton.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
   }

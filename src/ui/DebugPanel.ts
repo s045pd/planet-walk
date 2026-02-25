@@ -19,8 +19,8 @@ export class DebugPanel implements IDisposable {
   constructor() {
     this.container = document.createElement('div');
     this.container.style.position = 'absolute';
-    this.container.style.top = '10px';
-    this.container.style.right = '10px';
+    this.container.style.bottom = '10px';
+    this.container.style.left = '10px';
     this.container.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
     this.container.style.color = '#0f0';
     this.container.style.padding = '10px';
@@ -29,6 +29,7 @@ export class DebugPanel implements IDisposable {
     this.container.style.zIndex = '1000';
     this.container.style.pointerEvents = 'none';
     this.container.style.borderRadius = '4px';
+    this.container.style.display = 'none'; // 默认隐藏，按F3显示
 
     this.fpsElement = document.createElement('div');
     this.nodesElement = document.createElement('div');
@@ -39,6 +40,14 @@ export class DebugPanel implements IDisposable {
     this.container.appendChild(this.memoryElement);
 
     document.body.appendChild(this.container);
+
+    // F3 切换显示
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F3') {
+        e.preventDefault();
+        this.container.style.display = this.container.style.display === 'none' ? 'block' : 'none';
+      }
+    });
   }
 
   update(stats: DebugStats): void {
