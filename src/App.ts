@@ -137,7 +137,13 @@ export class App implements IDisposable {
   }
 
   /** 返回轨道视角 */
-  private returnToOrbit(): void {
+  private returnToOrbit(resetPosition = false): void {
+    if (resetPosition) {
+      // 重置相机到默认轨道位置（星球半径 * 3）
+      const r = this.planet.config.radius;
+      this.cameraManager.camera.position.set(0, 0, r * 3);
+      this.cameraManager.camera.lookAt(0, 0, 0);
+    }
     this.cameraManager.switchTo('orbit');
     this.landButton.show();
     this.guidePanel.showOrbitGuide();
@@ -197,8 +203,8 @@ export class App implements IDisposable {
     this.currentPlanet = planetType;
     this.planetSelector.setActive(planetType);
 
-    // 切换星球后回到轨道模式
-    this.returnToOrbit();
+    // 切换星球后回到轨道模式（重置相机位置）
+    this.returnToOrbit(true);
   };
 
   async start(): Promise<void> {
