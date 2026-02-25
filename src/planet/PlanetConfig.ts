@@ -6,6 +6,8 @@ export interface PlanetTextureConfig {
   normalPath?: string;
   /** 粗糙度贴图路径 */
   roughnessPath?: string;
+  /** 高度图路径 */
+  heightmapPath?: string;
   /** 贴图未加载时的占位颜色 */
   fallbackColor: number;
 }
@@ -18,6 +20,13 @@ export interface AtmosphereConfig {
   opacity: number;
 }
 
+/** 地形配置 */
+export interface TerrainConfig {
+  heightScale: number;
+  maxLodLevel?: number;
+  tileResolution?: number;
+}
+
 /** 星球配置 */
 export interface PlanetConfig {
   name: string;
@@ -27,4 +36,5 @@ export interface PlanetConfig {
   segments: number;
   textures: PlanetTextureConfig;
   atmosphere?: AtmosphereConfig;
+  terrain?: TerrainConfig;
 }

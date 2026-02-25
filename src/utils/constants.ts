@@ -17,3 +17,7 @@ export const CAMERA_FOV = 60;
 
 // 星空粒子数
 export const STAR_COUNT = 5000;
+
+// 地形参数
+export const TERRAIN_HEIGHT_SCALE = 5.0; // 地形起伏高度缩放
+export const TERRAIN_MAX_LEVEL = 10; // 地形细分最大层级
