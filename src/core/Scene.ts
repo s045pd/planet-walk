@@ -7,7 +7,7 @@ import { Planet } from '../planet/Planet';
 export class SceneManager implements IDisposable {
   readonly scene: THREE.Scene;
 
-  private readonly planet: Planet;
+  private planet: Planet;
   private skybox!: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   private stars!: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>;
   private sunLight!: THREE.DirectionalLight;
@@ -29,6 +29,13 @@ export class SceneManager implements IDisposable {
 
   get planetRadius(): number {
     return this.planet.config.radius;
+  }
+
+  replacePlanet(planet: Planet): void {
+    this.scene.remove(this.planet.root);
+    this.planet.dispose();
+    this.planet = planet;
+    this.addPlanet();
   }
 
   private addPlanet(): void {

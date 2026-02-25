@@ -27,6 +27,14 @@ export interface TerrainConfig {
   tileResolution?: number;
 }
 
+/** 预设兴趣点（地标） */
+export interface PlanetLandmark {
+  name: string;
+  lat: number;
+  lng: number;
+  description?: string;
+}
+
 /** 星球配置 */
 export interface PlanetConfig {
   name: string;
@@ -37,4 +45,5 @@ export interface PlanetConfig {
   textures: PlanetTextureConfig;
   atmosphere?: AtmosphereConfig;
   terrain?: TerrainConfig;
+  landmarks: PlanetLandmark[];
 }
