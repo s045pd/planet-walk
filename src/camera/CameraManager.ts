@@ -119,6 +119,7 @@ export class CameraManager implements IUpdatable, IDisposable {
     this.orbitMode.setEnabled(false);
     this._playerController.setEnabled(true);
     this._input.setPointerLockEnabled(true);
+    this._input.tryRequestPointerLock();
 
     if (mode === 'thirdPerson') {
       this._playerController.setMouseLookHandler(this._thirdPersonLookHandler);

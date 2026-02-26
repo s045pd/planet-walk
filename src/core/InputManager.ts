@@ -21,6 +21,9 @@ export class InputManager implements IDisposable {
   private _wheelDelta = 0;
   private _pointerLocked = false;
   private _pointerLockEnabled: boolean;
+  private _isFallbackLookDragging = false;
+  private _lastMouseX = 0;
+  private _lastMouseY = 0;
   private _jumpRequested = false;
   private readonly _canvas: HTMLCanvasElement | null;
   private readonly _isMobile: boolean;
@@ -43,6 +46,8 @@ export class InputManager implements IDisposable {
       document.addEventListener('mousemove', this.onMouseMove);
       document.addEventListener('pointerlockchange', this.onPointerLockChange);
       window.addEventListener('wheel', this.onWheel, { passive: false });
+      this._canvas?.addEventListener('mousedown', this.onMouseDown);
+      window.addEventListener('mouseup', this.onMouseUp);
       this.bindPointerLockClick();
     } else {
       this._virtualJoystick?.setActive(false);
@@ -117,9 +122,22 @@ export class InputManager implements IDisposable {
     if (!enabled && this._pointerLocked) {
       document.exitPointerLock();
     }
+    this._isFallbackLookDragging = false;
     this._mouseDelta.x = 0;
     this._mouseDelta.y = 0;
     this._wheelDelta = 0;
+  }
+
+  tryRequestPointerLock(): boolean {
+    if (this._isMobile) return false;
+    if (!this._pointerLockEnabled) return false;
+    if (!this._canvas) return false;
+    try {
+      this._canvas.requestPointerLock();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** 获取键盘+触控综合后的移动向量 */
@@ -163,14 +181,26 @@ export class InputManager implements IDisposable {
 
   private onMouseMove = (e: MouseEvent): void => {
     if (this._isMobile) return;
-    if (!this._pointerLocked) return;
-    this._mouseDelta.x += e.movementX;
-    this._mouseDelta.y += e.movementY;
+    if (this._pointerLocked) {
+      this._mouseDelta.x += e.movementX;
+      this._mouseDelta.y += e.movementY;
+      return;
+    }
+    if (!this._pointerLockEnabled || !this._isFallbackLookDragging) return;
+    const dx = e.clientX - this._lastMouseX;
+    const dy = e.clientY - this._lastMouseY;
+    this._lastMouseX = e.clientX;
+    this._lastMouseY = e.clientY;
+    this._mouseDelta.x += dx;
+    this._mouseDelta.y += dy;
   };
 
   private onPointerLockChange = (): void => {
     if (this._isMobile) return;
     this._pointerLocked = document.pointerLockElement === this._canvas;
+    if (this._pointerLocked) {
+      this._isFallbackLookDragging = false;
+    }
   };
 
   private onWheel = (e: WheelEvent): void => {
@@ -181,18 +211,31 @@ export class InputManager implements IDisposable {
     }
   };
 
-  private requestPointerLock = (): void => {
+  private onMouseDown = (e: MouseEvent): void => {
     if (this._isMobile) return;
-    if (!this._pointerLockEnabled) return;
-    this._canvas?.requestPointerLock();
+    if (!this._pointerLockEnabled || this._pointerLocked) return;
+    if (e.button !== 0) return;
+    this._isFallbackLookDragging = true;
+    this._lastMouseX = e.clientX;
+    this._lastMouseY = e.clientY;
+  };
+
+  private onMouseUp = (e: MouseEvent): void => {
+    if (this._isMobile) return;
+    if (e.button !== 0) return;
+    this._isFallbackLookDragging = false;
+  };
+
+  private onCanvasClick = (): void => {
+    this.tryRequestPointerLock();
   };
 
   private bindPointerLockClick(): void {
     if (this._isMobile) return;
     if (!this._canvas) return;
-    this._canvas.removeEventListener('click', this.requestPointerLock);
+    this._canvas.removeEventListener('click', this.onCanvasClick);
     if (this._pointerLockEnabled) {
-      this._canvas.addEventListener('click', this.requestPointerLock);
+      this._canvas.addEventListener('click', this.onCanvasClick);
     }
   }
 
@@ -203,8 +246,10 @@ export class InputManager implements IDisposable {
       document.removeEventListener('mousemove', this.onMouseMove);
       document.removeEventListener('pointerlockchange', this.onPointerLockChange);
       window.removeEventListener('wheel', this.onWheel);
+      this._canvas?.removeEventListener('mousedown', this.onMouseDown);
+      window.removeEventListener('mouseup', this.onMouseUp);
     }
-    this._canvas?.removeEventListener('click', this.requestPointerLock);
+    this._canvas?.removeEventListener('click', this.onCanvasClick);
     this._touchManager?.dispose();
     this._virtualJoystick?.dispose();
   }
