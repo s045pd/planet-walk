@@ -7,6 +7,8 @@ export interface HUDData {
   lng: number;
   alt: number;
   position: THREE.Vector3;
+  localTime: string;
+  timeScaleLabel: string;
 }
 
 /** 简单抬头显示：星球名 + 地理坐标 + 世界坐标 */
@@ -14,6 +16,7 @@ export class HUD implements IDisposable {
   private readonly root: HTMLDivElement;
   private readonly planetLine: HTMLDivElement;
   private readonly geoLine: HTMLDivElement;
+  private readonly timeLine: HTMLDivElement;
   private readonly worldLine: HTMLDivElement;
   private visible = true;
 
@@ -38,9 +41,10 @@ export class HUD implements IDisposable {
 
     this.planetLine = document.createElement('div');
     this.geoLine = document.createElement('div');
+    this.timeLine = document.createElement('div');
     this.worldLine = document.createElement('div');
 
-    this.root.append(this.planetLine, this.geoLine, this.worldLine);
+    this.root.append(this.planetLine, this.geoLine, this.timeLine, this.worldLine);
     document.body.appendChild(this.root);
   }
 
@@ -48,6 +52,8 @@ export class HUD implements IDisposable {
     this.planetLine.textContent = `Planet: ${data.planetName.toUpperCase()}`;
     this.geoLine.textContent =
       `Lat: ${data.lat.toFixed(2)}°, Lng: ${data.lng.toFixed(2)}°, Alt: ${data.alt.toFixed(1)} m`;
+    this.timeLine.textContent =
+      `Local Time: ${data.localTime} (${data.timeScaleLabel})`;
     this.worldLine.textContent =
       `X: ${data.position.x.toFixed(1)}  Y: ${data.position.y.toFixed(1)}  Z: ${data.position.z.toFixed(1)}`;
   }

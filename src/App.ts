@@ -39,6 +39,7 @@ import {
 import { AchievementManager } from './achievement/AchievementManager';
 import { AchievementPanel } from './ui/AchievementPanel';
 import { AchievementToast } from './ui/AchievementToast';
+import { DayNightCycle } from './environment/DayNightCycle';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -73,6 +74,7 @@ export class App implements IDisposable {
   private achievementPanel: AchievementPanel;
   private achievementToast: AchievementToast;
   private achievementUnsubscribes: Array<() => void> = [];
+  private dayNightCycle: DayNightCycle;
   private minimapFullscreen = false;
   private wasInSurfaceMode = false;
   private lastPlayerPosition: THREE.Vector3 | null = null;
@@ -202,6 +204,21 @@ export class App implements IDisposable {
         this.achievementToast.show(status);
       }),
     );
+
+    this.dayNightCycle = new DayNightCycle({
+      planetRadius: planet.config.radius,
+      sunLight: this.sceneManager.sunlight,
+      ambientLight: this.sceneManager.ambient,
+      skyboxMaterial: this.sceneManager.skyboxMaterial,
+      starsMaterial: this.sceneManager.starsMaterial,
+      onSunDirectionChange: (direction) => {
+        this.planet.setSunDirection(direction);
+      },
+      onAtmosphereUpdate: (daylight, twilight) => {
+        this.planet.setAtmosphereLighting(daylight, twilight);
+      },
+    });
+
     // ESC返回轨道
     window.addEventListener('keydown', this.onKeyDown);
 
@@ -239,6 +256,10 @@ export class App implements IDisposable {
     }
     if (e.code === 'KeyF' && !e.repeat) {
       this.collectSample();
+      return;
+    }
+    if (e.code === 'KeyT' && !e.repeat) {
+      this.dayNightCycle.cycleTimeScale();
       return;
     }
     if (e.code === 'KeyM' && !e.repeat) {
@@ -646,6 +667,7 @@ export class App implements IDisposable {
       nextPlanet.config.radius,
       nextPlanet.config.weather,
     );
+    this.dayNightCycle.setPlanetRadius(nextPlanet.config.radius);
 
     // 更新粒子特效
     this.setupParticles(planetType, nextPlanet.config.radius);
@@ -705,6 +727,8 @@ export class App implements IDisposable {
       }
 
       this.cameraManager.update(delta);
+      const cameraPosition = this.cameraSystem.camera.position;
+      this.dayNightCycle.update(delta, cameraPosition);
 
       this.updateAchievementState(delta);
       const inSurfaceMode = this.isInSurfaceMode();
@@ -743,19 +767,24 @@ export class App implements IDisposable {
       this.particleSystem?.update(delta);
 
       // 更新地标可见性
-      const cameraPosition = this.cameraSystem.camera.position;
       this.landmarkManager.update(cameraPosition);
 
       // 更新天气系统
       this.weatherSystem.update(delta, cameraPosition);
 
       const geo = cartesianToGeo(cameraPosition, this.sceneManager.planetRadius);
+      const playerGeo = cartesianToGeo(
+        this.playerController.state.position,
+        this.sceneManager.planetRadius,
+      );
       this.hud.update({
         planetName: this.sceneManager.planetName,
         lat: geo.lat,
         lng: geo.lng,
         alt: geo.alt,
         position: cameraPosition,
+        localTime: this.dayNightCycle.getLocalTimeString(playerGeo.lng),
+        timeScaleLabel: this.dayNightCycle.getTimeScaleLabel(),
       });
 
       this.performanceMonitor.update();

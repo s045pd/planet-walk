@@ -57,6 +57,11 @@ export class Atmosphere implements IDisposable {
     this.shader.setPlanetCenter(center);
   }
 
+  /** Update scattering balance for day/night + sunrise/sunset */
+  setDynamicScattering(daylight: number, twilight: number): void {
+    this.shader.setDynamicScattering(daylight, twilight);
+  }
+
   dispose(): void {
     this.mesh.geometry.dispose();
     this.shader.dispose();
