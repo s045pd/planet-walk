@@ -6,6 +6,7 @@ import type { IDisposable } from '../core/types';
 export class LandButton implements IDisposable {
   private readonly button: HTMLButtonElement;
   private onClick: (() => void) | null = null;
+  private lastClickAt = 0;
 
   constructor() {
     this.button = document.createElement('button');
@@ -30,7 +31,14 @@ export class LandButton implements IDisposable {
       this.button.style.boxShadow = '0 4px 20px rgba(26,107,255,0.4)';
     });
 
-    this.button.addEventListener('click', () => this.onClick?.());
+    this.button.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - this.lastClickAt < 300) {
+        return;
+      }
+      this.lastClickAt = now;
+      this.onClick?.();
+    });
     document.body.appendChild(this.button);
   }
 

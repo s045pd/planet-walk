@@ -21,6 +21,7 @@ export class PhotoModeUI implements IDisposable {
   private readonly hudToggle: HTMLInputElement;
   private readonly fovSlider: HTMLInputElement;
   private readonly fovValue: HTMLSpanElement;
+  private readonly screenshotToast: HTMLDivElement;
   private readonly filterButtons = new Map<PhotoFilterType, HTMLButtonElement>();
 
   private readonly onFilterChange: (filter: PhotoFilterType) => void;
@@ -29,6 +30,7 @@ export class PhotoModeUI implements IDisposable {
   private readonly onFovChange: (fov: number) => void;
 
   private visible = false;
+  private toastTimer: number | null = null;
 
   constructor(config: PhotoModeUIConfig) {
     this.onFilterChange = config.onFilterChange;
@@ -55,12 +57,19 @@ export class PhotoModeUI implements IDisposable {
     filterLabel.textContent = '滤镜';
     filterLabel.style.cssText = 'font-size:12px;opacity:0.85;margin-bottom:6px;';
 
+    const filterPanel = document.createElement('div');
+    filterPanel.style.cssText = `
+      background:#0a131f; border:1px solid #4d688c; border-radius:10px;
+      padding:10px; margin-bottom:12px;
+    `;
+
     const filterRow = document.createElement('div');
-    filterRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;';
+    filterRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
     this.createFilterButton(filterRow, '正常', 'normal');
     this.createFilterButton(filterRow, '复古', 'vintage');
     this.createFilterButton(filterRow, '科幻', 'sci-fi');
     this.createFilterButton(filterRow, '黑白', 'bw');
+    filterPanel.append(filterRow);
 
     const hudRow = document.createElement('label');
     hudRow.style.cssText =
@@ -106,6 +115,7 @@ export class PhotoModeUI implements IDisposable {
       'padding:7px 12px;border-radius:8px;border:1px solid rgba(117,196,255,0.5);background:#2274d6;color:#fff;cursor:pointer;font-size:12px;font-weight:600;';
     captureButton.addEventListener('click', () => {
       this.onCapture();
+      this.showScreenshotToast();
     });
 
     const tip = document.createElement('span');
@@ -114,7 +124,20 @@ export class PhotoModeUI implements IDisposable {
 
     actionRow.append(captureButton, tip);
 
-    this.root.append(title, filterLabel, filterRow, hudRow, fovHeader, this.fovSlider, actionRow);
+    this.screenshotToast = document.createElement('div');
+    this.screenshotToast.textContent = 'Screenshot saved!';
+    this.screenshotToast.style.cssText = `
+      position:absolute; right:14px; bottom:14px;
+      padding:6px 10px; border-radius:8px;
+      border:1px solid rgba(149, 225, 186, 0.9);
+      background:#0d2a1d; color:#ddffe9;
+      font-size:12px; font-weight:600;
+      opacity:0; transform:translateY(6px);
+      transition:opacity 160ms ease, transform 160ms ease;
+      pointer-events:none;
+    `;
+
+    this.root.append(title, filterLabel, filterPanel, hudRow, fovHeader, this.fovSlider, actionRow, this.screenshotToast);
     document.body.appendChild(this.root);
   }
 
@@ -137,11 +160,11 @@ export class PhotoModeUI implements IDisposable {
   setFilter(filter: PhotoFilterType): void {
     for (const [type, button] of this.filterButtons) {
       const active = type === filter;
-      button.style.background = active ? '#79bcff' : 'rgba(22, 36, 58, 0.95)';
-      button.style.color = active ? '#031427' : '#eaf4ff';
+      button.style.background = active ? '#f0c66b' : '#131d2c';
+      button.style.color = active ? '#241100' : '#f6fbff';
       button.style.borderColor = active
-        ? 'rgba(176, 219, 255, 0.95)'
-        : 'rgba(149, 201, 255, 0.35)';
+        ? '#ffde97'
+        : '#6b89b4';
     }
   }
 
@@ -156,6 +179,10 @@ export class PhotoModeUI implements IDisposable {
   }
 
   dispose(): void {
+    if (this.toastTimer !== null) {
+      window.clearTimeout(this.toastTimer);
+      this.toastTimer = null;
+    }
     this.root.remove();
   }
 
@@ -168,12 +195,25 @@ export class PhotoModeUI implements IDisposable {
     button.type = 'button';
     button.textContent = label;
     button.style.cssText =
-      'padding:6px 10px;border-radius:7px;border:1px solid rgba(149, 201, 255, 0.5);background:rgba(30, 50, 80, 0.95);color:#f0f6ff;cursor:pointer;font-size:12px;font-weight:500;';
+      'padding:6px 10px;border-radius:7px;border:1px solid #6b89b4;background:#131d2c;color:#f6fbff;cursor:pointer;font-size:12px;font-weight:600;';
     button.addEventListener('click', () => {
       this.setFilter(filter);
       this.onFilterChange(filter);
     });
     this.filterButtons.set(filter, button);
     container.appendChild(button);
+  }
+
+  private showScreenshotToast(): void {
+    this.screenshotToast.style.opacity = '1';
+    this.screenshotToast.style.transform = 'translateY(0)';
+    if (this.toastTimer !== null) {
+      window.clearTimeout(this.toastTimer);
+    }
+    this.toastTimer = window.setTimeout(() => {
+      this.screenshotToast.style.opacity = '0';
+      this.screenshotToast.style.transform = 'translateY(6px)';
+      this.toastTimer = null;
+    }, 2000);
   }
 }

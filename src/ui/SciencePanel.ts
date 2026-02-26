@@ -16,9 +16,9 @@ export class SciencePanel implements IDisposable {
   constructor() {
     this.root = document.createElement('div');
     this.root.style.cssText = `
-      position: fixed; right: 16px; top: 72px; z-index: 60;
+      position: fixed; right: 16px; bottom: 260px; z-index: 60;
       display: flex; flex-direction: column; gap: 10px; pointer-events: none;
-      width: min(360px, calc(100vw - 24px));
+      width: min(360px, calc(100vw - 32px));
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     `;
 

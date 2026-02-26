@@ -40,6 +40,7 @@ import { AchievementManager } from './achievement/AchievementManager';
 import { AchievementPanel } from './ui/AchievementPanel';
 import { AchievementToast } from './ui/AchievementToast';
 import { DayNightCycle } from './environment/DayNightCycle';
+import { HelpOverlay } from './ui/HelpOverlay';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -73,6 +74,7 @@ export class App implements IDisposable {
   private achievementManager: AchievementManager;
   private achievementPanel: AchievementPanel;
   private achievementToast: AchievementToast;
+  private helpOverlay: HelpOverlay;
   private achievementUnsubscribes: Array<() => void> = [];
   private dayNightCycle: DayNightCycle;
   private minimapFullscreen = false;
@@ -203,6 +205,7 @@ export class App implements IDisposable {
     this.achievementManager = new AchievementManager();
     this.achievementPanel = new AchievementPanel(this.achievementManager);
     this.achievementToast = new AchievementToast();
+    this.helpOverlay = new HelpOverlay();
     this.achievementUnsubscribes.push(
       this.achievementManager.onUnlock((status) => {
         this.achievementToast.show(status);
@@ -240,6 +243,18 @@ export class App implements IDisposable {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === 'KeyH' && !e.repeat) {
+      this.helpOverlay.toggle();
+      return;
+    }
+
+    if (this.helpOverlay.isOpen) {
+      if (e.key === 'Escape') {
+        this.helpOverlay.close();
+      }
+      return;
+    }
+
     if (e.code === 'Tab' && !e.repeat) {
       e.preventDefault();
       this.achievementPanel.toggle();
@@ -596,16 +611,22 @@ export class App implements IDisposable {
       return;
     }
     this.isLanding = true;
+    this.planetSelector.setDisabled(true);
     this.landButton.hide();
     this.guidePanel.fadeOut();
     const geo = cartesianToGeo(
       this.cameraSystem.camera.position,
       this.sceneManager.planetRadius,
     );
-    this.cameraManager.animateToSurface(geo.lat, geo.lng, 2500).then(() => {
-      this.isLanding = false;
-      this.guidePanel.showFirstPersonGuide();
-    });
+    this.cameraManager
+      .animateToSurface(geo.lat, geo.lng, 2500)
+      .then(() => {
+        this.guidePanel.showFirstPersonGuide();
+      })
+      .finally(() => {
+        this.isLanding = false;
+        this.planetSelector.setDisabled(false);
+      });
   }
 
   /** 返回轨道视角 */
@@ -617,6 +638,7 @@ export class App implements IDisposable {
       this.cameraManager.camera.lookAt(0, 0, 0);
     }
     this.cameraManager.switchTo('orbit');
+    this.planetSelector.setDisabled(false);
     this.landButton.show();
     this.guidePanel.showOrbitGuide();
   }
@@ -840,6 +862,7 @@ export class App implements IDisposable {
     this.achievementUnsubscribes = [];
     this.achievementPanel.dispose();
     this.achievementToast.dispose();
+    this.helpOverlay.dispose();
     this.achievementManager.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();

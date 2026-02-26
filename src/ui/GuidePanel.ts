@@ -6,6 +6,7 @@ import type { IDisposable } from '../core/types';
 export class GuidePanel implements IDisposable {
   private readonly root: HTMLDivElement;
   private visible = true;
+  private fadeTimer: number | null = null;
 
   constructor() {
     this.root = document.createElement('div');
@@ -28,6 +29,7 @@ export class GuidePanel implements IDisposable {
       点击下方 <b>降落</b> 按钮进入地表漫步
     `;
     this.root.style.opacity = '1';
+    this.scheduleAutoFade();
   }
 
   /** 显示第一人称模式引导 */
@@ -37,8 +39,7 @@ export class GuidePanel implements IDisposable {
       ESC 返回轨道视角
     `;
     this.root.style.opacity = '1';
-    // 5秒后自动淡出
-    setTimeout(() => this.fadeOut(), 5000);
+    this.scheduleAutoFade();
   }
 
   fadeOut(): void {
@@ -51,9 +52,27 @@ export class GuidePanel implements IDisposable {
     }
     this.visible = visible;
     this.root.style.display = visible ? 'block' : 'none';
+    if (!visible && this.fadeTimer !== null) {
+      window.clearTimeout(this.fadeTimer);
+      this.fadeTimer = null;
+    }
   }
 
   dispose(): void {
+    if (this.fadeTimer !== null) {
+      window.clearTimeout(this.fadeTimer);
+      this.fadeTimer = null;
+    }
     this.root.remove();
+  }
+
+  private scheduleAutoFade(): void {
+    if (this.fadeTimer !== null) {
+      window.clearTimeout(this.fadeTimer);
+    }
+    this.fadeTimer = window.setTimeout(() => {
+      this.fadeOut();
+      this.fadeTimer = null;
+    }, 8000);
   }
 }
