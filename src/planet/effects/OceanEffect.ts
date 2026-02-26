@@ -86,7 +86,15 @@ export class OceanEffect implements IDisposable {
         material.uniforms.oceanMask.value = tex;
       },
       undefined,
-      () => { /* 静默跳过 */ },
+      () => {
+        // 纹理缺失时用白色1x1纹理作为fallback（全球海洋高光）
+        const fallback = new THREE.DataTexture(
+          new Uint8Array([255, 255, 255, 255]), 1, 1,
+          THREE.RGBAFormat,
+        );
+        fallback.needsUpdate = true;
+        material.uniforms.oceanMask.value = fallback;
+      },
     );
 
     this.mesh = new THREE.Mesh(geometry, material);
