@@ -6,6 +6,12 @@ import { EarthEffects } from './effects/EarthEffects';
 import { ProceduralTexture } from './ProceduralTexture';
 import { HeightmapGenerator } from './HeightmapGenerator';
 
+type MeshStandardTextureSlot =
+  | 'map'
+  | 'normalMap'
+  | 'roughnessMap'
+  | 'displacementMap';
+
 /** 星球基类：球体网格 + 纹理 + 可选大气层 */
 export class Planet implements IDisposable {
   readonly config: PlanetConfig;
@@ -16,6 +22,10 @@ export class Planet implements IDisposable {
   private earthEffects?: EarthEffects;
   private readonly sunDirection = new THREE.Vector3(1, 0.3, 0.5).normalize();
   private readonly textureLoader = new THREE.TextureLoader();
+  private readonly preloadImageLoader = new THREE.ImageLoader();
+  private readonly ownedTextures = new Set<THREE.Texture>();
+  private disposed = false;
+  private deferredTexturesLoaded = false;
 
   constructor(config: PlanetConfig) {
     this.config = config;
@@ -27,6 +37,9 @@ export class Planet implements IDisposable {
 
     // 先用程序化纹理作为默认，外部纹理加载成功后再替换
     const proceduralMap = this.getProceduralTexture();
+    if (proceduralMap) {
+      this.trackTexture(proceduralMap);
+    }
 
     const standardMaterial = new THREE.MeshStandardMaterial({
       color: proceduralMap ? 0xffffff : config.textures.fallbackColor,
@@ -43,12 +56,12 @@ export class Planet implements IDisposable {
 
     // 异步加载外部纹理（成功则替换程序化纹理）
     if (config.textures.diffusePath) {
-      this.textureLoader.load(
+      this.loadTexture(
         config.textures.diffusePath,
         (tex) => {
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = 8;
-          standardMaterial.map = tex;
+          this.assignMaterialTexture(standardMaterial, 'map', tex);
           if (!config.textures.heightmapPath) {
             this.applyGeneratedHeightmap(standardMaterial, tex);
           }
@@ -58,22 +71,32 @@ export class Planet implements IDisposable {
     }
 
     if (config.textures.normalPath) {
-      this.textureLoader.load(config.textures.normalPath, (tex) => {
-        standardMaterial.normalMap = tex;
+      this.loadTexture(config.textures.normalPath, (tex) => {
+        tex.colorSpace = THREE.NoColorSpace;
+        tex.anisotropy = 8;
+        this.assignMaterialTexture(standardMaterial, 'normalMap', tex);
         standardMaterial.normalScale.set(1, 1);
         standardMaterial.needsUpdate = true;
       });
     }
 
+    if (config.textures.roughnessPath) {
+      this.loadTexture(config.textures.roughnessPath, (tex) => {
+        tex.colorSpace = THREE.NoColorSpace;
+        tex.anisotropy = 8;
+        this.assignMaterialTexture(standardMaterial, 'roughnessMap', tex);
+        standardMaterial.needsUpdate = true;
+      });
+    }
+
     if (config.textures.heightmapPath) {
-      this.textureLoader.load(
+      this.loadTexture(
         config.textures.heightmapPath,
         (tex) => {
           this.configureHeightTexture(tex);
-          standardMaterial.displacementMap = tex;
+          this.assignMaterialTexture(standardMaterial, 'displacementMap', tex);
           standardMaterial.needsUpdate = true;
         },
-        undefined,
         () => {
           const diffuse = standardMaterial.map;
           if (diffuse) {
@@ -103,6 +126,7 @@ export class Planet implements IDisposable {
       this.earthEffects = new EarthEffects(config.radius, config.segments, {
         cloudsPath: config.textures.cloudsPath,
         nightPath: config.textures.nightPath,
+        deferTextureLoad: true,
       });
       this.root.add(this.earthEffects.root);
     }
@@ -119,9 +143,6 @@ export class Planet implements IDisposable {
       this.config.textures.normalPath,
       this.config.textures.roughnessPath,
       this.config.textures.heightmapPath,
-      this.config.textures.nightPath,
-      this.config.textures.cloudsPath,
-      this.config.textures.specularPath,
     ].filter((p): p is string => !!p);
 
     if (paths.length === 0) {
@@ -135,7 +156,7 @@ export class Planet implements IDisposable {
     const promises = paths.map(
       (path) =>
         new Promise<void>((resolve) => {
-          this.textureLoader.load(
+          this.preloadImageLoader.load(
             path,
             () => {
               loaded++;
@@ -154,6 +175,14 @@ export class Planet implements IDisposable {
     );
 
     return Promise.all(promises).then(() => {});
+  }
+
+  loadDeferredTextures(): Promise<void> {
+    if (this.deferredTexturesLoaded || !this.earthEffects) {
+      return Promise.resolve();
+    }
+    this.deferredTexturesLoaded = true;
+    return this.earthEffects.loadDeferredTextures();
   }
 
   /** 获取当前星球的程序化纹理 */
@@ -187,7 +216,7 @@ export class Planet implements IDisposable {
     const generated = HeightmapGenerator.fromTexture(diffuseTexture);
     if (!generated) return;
     this.configureHeightTexture(generated);
-    material.displacementMap = generated;
+    this.assignMaterialTexture(material, 'displacementMap', generated);
   }
 
   private configureHeightTexture(texture: THREE.Texture): void {
@@ -195,8 +224,62 @@ export class Planet implements IDisposable {
     texture.anisotropy = 8;
   }
 
+  private loadTexture(
+    path: string,
+    onLoad: (texture: THREE.Texture) => void,
+    onError?: () => void,
+  ): void {
+    this.textureLoader.load(
+      path,
+      (texture) => {
+        if (this.disposed) {
+          texture.dispose();
+          return;
+        }
+        this.trackTexture(texture);
+        onLoad(texture);
+      },
+      undefined,
+      () => {
+        onError?.();
+      },
+    );
+  }
+
+  private assignMaterialTexture(
+    material: THREE.MeshStandardMaterial,
+    slot: MeshStandardTextureSlot,
+    texture: THREE.Texture,
+  ): void {
+    const previous = material[slot];
+    if (previous && previous !== texture) {
+      this.disposeTexture(previous);
+    }
+    material[slot] = texture;
+    this.trackTexture(texture);
+  }
+
+  private trackTexture(texture: THREE.Texture): void {
+    this.ownedTextures.add(texture);
+  }
+
+  private disposeTexture(texture: THREE.Texture): void {
+    this.ownedTextures.delete(texture);
+    texture.dispose();
+  }
+
   dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+
     this.mesh.geometry.dispose();
+    const material = this.mesh.material;
+    if (material.map) this.disposeTexture(material.map);
+    if (material.normalMap) this.disposeTexture(material.normalMap);
+    if (material.roughnessMap) this.disposeTexture(material.roughnessMap);
+    if (material.displacementMap) this.disposeTexture(material.displacementMap);
     this.mesh.material.dispose();
 
     if (this.atmosphere) {
@@ -206,5 +289,10 @@ export class Planet implements IDisposable {
     if (this.earthEffects) {
       this.earthEffects.dispose();
     }
+
+    for (const texture of this.ownedTextures) {
+      texture.dispose();
+    }
+    this.ownedTextures.clear();
   }
 }

@@ -40,10 +40,20 @@ void main() {
  */
 export class NightLights implements IDisposable {
   readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
+  private readonly textureLoader = new THREE.TextureLoader();
+  private readonly nightPath?: string;
+  private textureLoaded = false;
+  private disposed = false;
 
-  constructor(planetRadius: number, segments: number, nightPath?: string) {
+  constructor(
+    planetRadius: number,
+    segments: number,
+    nightPath?: string,
+    autoLoad = true,
+  ) {
     const radius = planetRadius * 1.001;
     const geometry = new THREE.SphereGeometry(radius, segments, segments);
+    this.nightPath = nightPath;
 
     const material = new THREE.ShaderMaterial({
       vertexShader,
@@ -57,24 +67,54 @@ export class NightLights implements IDisposable {
       depthWrite: false,
     });
 
-    if (nightPath) {
-      const loader = new THREE.TextureLoader();
-      loader.load(nightPath, (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = 8;
-        material.uniforms.nightMap.value = tex;
-      }, undefined, () => { /* 静默跳过 */ });
-    }
-
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'earth-nightlights';
+
+    if (autoLoad) {
+      void this.loadTexture();
+    }
   }
 
   setSunDirection(dir: THREE.Vector3): void {
     this.mesh.material.uniforms.sunDirection.value.copy(dir);
   }
 
+  loadTexture(): Promise<void> {
+    if (this.textureLoaded || !this.nightPath || this.disposed) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      this.textureLoader.load(
+        this.nightPath!,
+        (tex) => {
+          if (this.disposed) {
+            tex.dispose();
+            resolve();
+            return;
+          }
+
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.anisotropy = 8;
+          const material = this.mesh.material;
+          const oldTexture = material.uniforms.nightMap.value as THREE.Texture | null;
+          material.uniforms.nightMap.value = tex;
+          if (oldTexture && oldTexture !== tex) {
+            oldTexture.dispose();
+          }
+          this.textureLoaded = true;
+          resolve();
+        },
+        undefined,
+        () => {
+          resolve();
+        },
+      );
+    });
+  }
+
   dispose(): void {
+    this.disposed = true;
     this.mesh.geometry.dispose();
     const mat = this.mesh.material;
     const nightMap = mat.uniforms.nightMap.value as THREE.Texture | null;
