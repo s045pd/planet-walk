@@ -85,6 +85,10 @@ export class PlayerController implements IUpdatable, IDisposable {
   private readonly _down = new THREE.Vector3();
   private readonly _sampleUv = new THREE.Vector2();
   private readonly _worldUp = new THREE.Vector3(0, 1, 0);
+  private readonly _distanceAnchor = new THREE.Vector3();
+  private hasDistanceAnchor = false;
+  private walkDistanceDelta = 0;
+  private totalWalkDistance = 0;
 
   constructor(config: PlayerControllerConfig) {
     this.input = config.input;
@@ -124,6 +128,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.applyVelocity(dt);
     this.resolveTerrainCollision(dt);
     this.alignToSurface(dt);
+    this.trackWalkDistance();
     this.updateFootsteps(dt);
     if (this._syncCameraInController) {
       this.firstPerson.update(this.state);
@@ -132,6 +137,9 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+    if (!enabled) {
+      this.resetWalkDistanceAnchor();
+    }
   }
 
   setMouseLookHandler(handler: ((dx: number, dy: number) => void) | null): void {
@@ -140,6 +148,16 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   setCameraSyncEnabled(enabled: boolean): void {
     this._syncCameraInController = enabled;
+  }
+
+  consumeWalkDistanceDelta(): number {
+    const delta = this.walkDistanceDelta;
+    this.walkDistanceDelta = 0;
+    return delta;
+  }
+
+  getTotalWalkDistance(): number {
+    return this.totalWalkDistance;
   }
 
   /** 将玩家状态与当前相机位置同步，避免模式切换跳变 */
@@ -159,6 +177,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.state.resetVelocity();
     this.state.onGround = false;
     this.footstepCooldown = 0;
+    this.resetWalkDistanceAnchor();
     this.firstPerson.update(this.state);
   }
 
@@ -307,6 +326,28 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.footstepCooldown = THREE.MathUtils.clamp(0.44 / cadence, 0.18, 0.55);
   }
 
+  private trackWalkDistance(): void {
+    if (!this.hasDistanceAnchor) {
+      this._distanceAnchor.copy(this.state.position);
+      this.hasDistanceAnchor = true;
+      return;
+    }
+
+    const step = this.state.position.distanceTo(this._distanceAnchor);
+    this._distanceAnchor.copy(this.state.position);
+    if (step <= 1e-4) {
+      return;
+    }
+
+    this.walkDistanceDelta += step;
+    this.totalWalkDistance += step;
+  }
+
+  private resetWalkDistanceAnchor(): void {
+    this.hasDistanceAnchor = false;
+    this.walkDistanceDelta = 0;
+  }
+
   private getHitDisplacement(hit: THREE.Intersection): number {
     if (!hit.uv) return 0;
 
@@ -437,6 +478,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.state.up.copy(this._surfaceDir);
     this.state.quaternion.setFromUnitVectors(this._worldUp, this._surfaceDir);
     this.footstepCooldown = 0;
+    this.resetWalkDistanceAnchor();
   }
 
   dispose(): void {

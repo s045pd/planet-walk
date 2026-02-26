@@ -88,7 +88,10 @@ export class App implements IDisposable {
   private minimapFullscreen = false;
   private wasInSurfaceMode = false;
   private isLanding = false;
-  private lastPlayerPosition: THREE.Vector3 | null = null;
+  private statsSaveElapsed = 0;
+  private pendingStatsDistance = 0;
+  private pendingStatsPlayTime = 0;
+  private pendingStatsSamples = 0;
   private lastWeatherTag: string | null = null;
   private clock = new THREE.Clock();
   private animationId = 0;
@@ -363,6 +366,7 @@ export class App implements IDisposable {
         this.achievementManager = manager;
         this.achievementPanel = panel;
         this.achievementToast = toast;
+        this.flushPendingStatsToPanel();
         if (this.pendingAchievementEvents.length > 0) {
           for (const event of this.pendingAchievementEvents) {
             manager.recordEvent(event);
@@ -641,7 +645,7 @@ export class App implements IDisposable {
     }
   }
 
-  private updateAchievementState(delta: number): void {
+  private updateAchievementState(delta: number, walkedDistance: number): void {
     if (!this.achievementManager) {
       return;
     }
@@ -652,7 +656,6 @@ export class App implements IDisposable {
         type: 'planet_landed',
         planet: this.currentPlanet,
       });
-      this.lastPlayerPosition = this.playerController.state.position.clone();
     }
 
     if (inSurfaceMode) {
@@ -663,17 +666,11 @@ export class App implements IDisposable {
         altitude: playerGeo.alt,
       });
 
-      if (this.lastPlayerPosition) {
-        const step = playerPosition.distanceTo(this.lastPlayerPosition);
-        if (step > 1e-3) {
-          this.recordAchievementEvent({
-            type: 'distance_walked',
-            distance: step,
-          });
-        }
-        this.lastPlayerPosition.copy(playerPosition);
-      } else {
-        this.lastPlayerPosition = playerPosition.clone();
+      if (walkedDistance > 1e-3) {
+        this.recordAchievementEvent({
+          type: 'distance_walked',
+          distance: walkedDistance,
+        });
       }
 
       const movement = this.inputManager.getMovementAxis();
@@ -686,7 +683,6 @@ export class App implements IDisposable {
         delta,
       });
     } else {
-      this.lastPlayerPosition = null;
       this.recordAchievementEvent({
         type: 'walk_streak_tick',
         moving: false,
@@ -706,6 +702,42 @@ export class App implements IDisposable {
           weather,
         });
       }
+    }
+  }
+
+  private updateStatsState(delta: number, walkedDistance: number): void {
+    this.pendingStatsPlayTime += Math.max(0, delta);
+
+    if (this.isInSurfaceMode() && walkedDistance > 0) {
+      this.pendingStatsDistance += walkedDistance;
+    }
+
+    if (this.achievementPanel) {
+      this.flushPendingStatsToPanel();
+      this.statsSaveElapsed += Math.max(0, delta);
+      if (this.statsSaveElapsed >= 5) {
+        this.achievementPanel.saveStats();
+        this.statsSaveElapsed = 0;
+      }
+    }
+  }
+
+  private flushPendingStatsToPanel(): void {
+    if (!this.achievementPanel) {
+      return;
+    }
+
+    if (this.pendingStatsPlayTime > 0) {
+      this.achievementPanel.addPlayTime(this.pendingStatsPlayTime);
+      this.pendingStatsPlayTime = 0;
+    }
+    if (this.pendingStatsDistance > 0) {
+      this.achievementPanel.addWalkDistance(this.pendingStatsDistance);
+      this.pendingStatsDistance = 0;
+    }
+    if (this.pendingStatsSamples > 0) {
+      this.achievementPanel.addCollectedSamples(this.pendingStatsSamples);
+      this.pendingStatsSamples = 0;
     }
   }
 
@@ -750,6 +782,11 @@ export class App implements IDisposable {
       type: 'sample_collected',
       sampleType,
     });
+    if (this.achievementPanel) {
+      this.achievementPanel.addCollectedSamples(1);
+      return;
+    }
+    this.pendingStatsSamples += 1;
   }
 
   private normalizeSiteName(name: string): string {
@@ -919,7 +956,6 @@ export class App implements IDisposable {
     this.currentPlanet = planetType;
     this.planetSelector.setActive(planetType);
     this.lastWeatherTag = null;
-    this.lastPlayerPosition = null;
     this.wasInSurfaceMode = false;
 
     // 切换星球后回到轨道模式（重置相机位置）
@@ -958,6 +994,7 @@ export class App implements IDisposable {
       const delta = this.clock.getDelta();
 
       if (this.photoModeActive) {
+        this.updateStatsState(delta, 0);
         this.photoMode?.update(delta);
         this.filterManager.update(delta);
         this.filterManager.render(delta);
@@ -968,7 +1005,9 @@ export class App implements IDisposable {
       const cameraPosition = this.cameraSystem.camera.position;
       this.dayNightCycle.update(delta, cameraPosition);
 
-      this.updateAchievementState(delta);
+      const walkedDistance = this.playerController.consumeWalkDistanceDelta();
+      this.updateAchievementState(delta, walkedDistance);
+      this.updateStatsState(delta, walkedDistance);
       const inSurfaceMode = this.isInSurfaceMode();
       this.minimap.setVisible(inSurfaceMode);
       if (inSurfaceMode) {
@@ -1067,6 +1106,7 @@ export class App implements IDisposable {
       unsubscribe();
     }
     this.achievementUnsubscribes = [];
+    this.achievementPanel?.saveStats(true);
     this.achievementPanel?.dispose();
     this.achievementToast?.dispose();
     this.helpOverlay.dispose();
