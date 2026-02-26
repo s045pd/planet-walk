@@ -106,6 +106,8 @@ export class Planet implements IDisposable {
       });
       this.root.add(this.earthEffects.root);
     }
+
+    this.setSunDirection(this.sunDirection);
   }
 
   /**
@@ -167,6 +169,15 @@ export class Planet implements IDisposable {
   /** 每帧更新（地球特效等） */
   update(delta: number): void {
     this.earthEffects?.update(delta, this.sunDirection);
+  }
+
+  setSunDirection(direction: THREE.Vector3): void {
+    this.sunDirection.copy(direction).normalize();
+    this.atmosphere?.setSunDirection(this.sunDirection);
+  }
+
+  setAtmosphereLighting(daylight: number, twilight: number): void {
+    this.atmosphere?.setDynamicScattering(daylight, twilight);
   }
 
   private applyGeneratedHeightmap(

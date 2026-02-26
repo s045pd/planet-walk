@@ -10,6 +10,7 @@ export class SceneManager implements IDisposable {
   private planet: Planet;
   private skybox!: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   private stars!: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  private ambientLight!: THREE.AmbientLight;
   private sunLight!: THREE.DirectionalLight;
   private sunTarget!: THREE.Object3D;
 
@@ -31,6 +32,22 @@ export class SceneManager implements IDisposable {
     return this.planet.config.radius;
   }
 
+  get skyboxMaterial(): THREE.ShaderMaterial {
+    return this.skybox.material;
+  }
+
+  get starsMaterial(): THREE.ShaderMaterial {
+    return this.stars.material;
+  }
+
+  get sunlight(): THREE.DirectionalLight {
+    return this.sunLight;
+  }
+
+  get ambient(): THREE.AmbientLight {
+    return this.ambientLight;
+  }
+
   replacePlanet(planet: Planet): void {
     this.scene.remove(this.planet.root);
     this.planet.dispose();
@@ -50,6 +67,7 @@ export class SceneManager implements IDisposable {
       uniforms: {
         topColor: { value: new THREE.Color(0x060816) },
         bottomColor: { value: new THREE.Color(0x010205) },
+        brightness: { value: 1.0 },
       },
       vertexShader: `
         varying vec3 vWorldPosition;
@@ -63,11 +81,12 @@ export class SceneManager implements IDisposable {
       fragmentShader: `
         uniform vec3 topColor;
         uniform vec3 bottomColor;
+        uniform float brightness;
         varying vec3 vWorldPosition;
 
         void main() {
           float h = normalize(vWorldPosition).y * 0.5 + 0.5;
-          vec3 color = mix(bottomColor, topColor, smoothstep(0.0, 1.0, h));
+          vec3 color = mix(bottomColor, topColor, smoothstep(0.0, 1.0, h)) * brightness;
           gl_FragColor = vec4(color, 1.0);
         }
       `,
@@ -105,6 +124,9 @@ export class SceneManager implements IDisposable {
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
+      uniforms: {
+        visibility: { value: 1.0 },
+      },
       vertexShader: `
         attribute float size;
         attribute float brightness;
@@ -118,11 +140,12 @@ export class SceneManager implements IDisposable {
         }
       `,
       fragmentShader: `
+        uniform float visibility;
         varying float vBrightness;
 
         void main() {
           float d = distance(gl_PointCoord, vec2(0.5));
-          float alpha = smoothstep(0.5, 0.0, d) * vBrightness;
+          float alpha = smoothstep(0.5, 0.0, d) * vBrightness * visibility;
           gl_FragColor = vec4(vec3(vBrightness), alpha);
         }
       `,
@@ -134,8 +157,8 @@ export class SceneManager implements IDisposable {
   }
 
   private createLights(): void {
-    const ambient = new THREE.AmbientLight(0x25303f, 0.35);
-    this.scene.add(ambient);
+    this.ambientLight = new THREE.AmbientLight(0x25303f, 0.35);
+    this.scene.add(this.ambientLight);
 
     this.sunLight = new THREE.DirectionalLight(0xfff6dd, 2.2);
     this.sunLight.position
