@@ -75,6 +75,25 @@ export const zhCN = {
   'infoCard.unknownLandmark': '未知地标',
 
   'achievementToast.unlocked': '成就解锁: {name}',
+
+  'shareCard.title': '分享照片',
+  'shareCard.subtitle': '选择卡片样式，下载或分享给朋友',
+  'shareCard.close': '✕ 关闭',
+  'shareCard.template': '卡片样式:',
+  'shareCard.template.minimal': '简约',
+  'shareCard.template.sciFi': '科幻',
+  'shareCard.template.postcard': '明信片',
+  'shareCard.download': '📥 下载',
+  'shareCard.copyLink': '🔗 复制链接',
+  'shareCard.webShare': '📤 分享',
+  'shareCard.shareTitle': '我在 Planet Walk 探索了{planet}！',
+  'shareCard.shareText': '来看看我在{planet}拍的照片吧！',
+  'shareCard.watermark.coords': '坐标:',
+  'shareCard.watermark.captured': '拍摄于',
+  'shareCard.status.linkCopied': '✅ 链接已复制到剪贴板',
+  'shareCard.status.copyFailed': '❌ 复制失败，请手动复制',
+  'shareCard.status.shared': '✅ 已分享',
+  'shareCard.status.imageError': '❌ 图片加载失败',
 } as const;
 
 export type TranslationKey = keyof typeof zhCN;

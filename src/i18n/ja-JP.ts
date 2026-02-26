@@ -77,4 +77,23 @@ export const jaJP: Record<TranslationKey, string> = {
   'infoCard.unknownLandmark': '不明なランドマーク',
 
   'achievementToast.unlocked': '実績解除: {name}',
+
+  'shareCard.title': '写真を共有',
+  'shareCard.subtitle': 'カードスタイルを選んでダウンロードまたは共有',
+  'shareCard.close': '✕ 閉じる',
+  'shareCard.template': 'カードスタイル:',
+  'shareCard.template.minimal': 'シンプル',
+  'shareCard.template.sciFi': 'SF',
+  'shareCard.template.postcard': 'ポストカード',
+  'shareCard.download': '📥 ダウンロード',
+  'shareCard.copyLink': '🔗 リンクをコピー',
+  'shareCard.webShare': '📤 共有',
+  'shareCard.shareTitle': 'Planet Walkで{planet}を探索しました！',
+  'shareCard.shareText': '{planet}で撮った写真を見てください！',
+  'shareCard.watermark.coords': '座標:',
+  'shareCard.watermark.captured': '撮影日時',
+  'shareCard.status.linkCopied': '✅ リンクをクリップボードにコピーしました',
+  'shareCard.status.copyFailed': '❌ コピーに失敗しました',
+  'shareCard.status.shared': '✅ 共有しました',
+  'shareCard.status.imageError': '❌ 画像の読み込みに失敗しました',
 };

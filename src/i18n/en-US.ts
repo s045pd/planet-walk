@@ -77,4 +77,23 @@ export const enUS: Record<TranslationKey, string> = {
   'infoCard.unknownLandmark': 'Unknown landmark',
 
   'achievementToast.unlocked': 'Achievement unlocked: {name}',
+
+  'shareCard.title': 'Share Photo',
+  'shareCard.subtitle': 'Choose a card style, download or share with friends',
+  'shareCard.close': '✕ Close',
+  'shareCard.template': 'Card Style:',
+  'shareCard.template.minimal': 'Minimal',
+  'shareCard.template.sciFi': 'Sci-Fi',
+  'shareCard.template.postcard': 'Postcard',
+  'shareCard.download': '📥 Download',
+  'shareCard.copyLink': '🔗 Copy Link',
+  'shareCard.webShare': '📤 Share',
+  'shareCard.shareTitle': 'I explored {planet} on Planet Walk!',
+  'shareCard.shareText': 'Check out my photo from {planet}!',
+  'shareCard.watermark.coords': 'Coords:',
+  'shareCard.watermark.captured': 'Captured at',
+  'shareCard.status.linkCopied': '✅ Link copied to clipboard',
+  'shareCard.status.copyFailed': '❌ Copy failed, please copy manually',
+  'shareCard.status.shared': '✅ Shared',
+  'shareCard.status.imageError': '❌ Failed to load image',
 };
