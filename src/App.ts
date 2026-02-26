@@ -29,6 +29,9 @@ import { PhotoMode } from './camera/PhotoMode';
 import { PhotoModeUI } from './ui/PhotoModeUI';
 import { FilterManager } from './postprocess/FilterManager';
 import type { PhotoFilterType } from './postprocess/FilterManager';
+import { Scanner } from './science/Scanner';
+import { SampleCollector } from './science/SampleCollector';
+import { SciencePanel } from './ui/SciencePanel';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -56,6 +59,9 @@ export class App implements IDisposable {
   private photoModeActive = false;
   private photoModeHideHUD = true;
   private pointerLockEnabledBeforePhoto = false;
+  private scanner: Scanner;
+  private sampleCollector: SampleCollector;
+  private sciencePanel: SciencePanel;
   private minimapFullscreen = false;
   private clock = new THREE.Clock();
   private animationId = 0;
@@ -162,6 +168,18 @@ export class App implements IDisposable {
       onHudToggle: this.onPhotoHUDToggle,
       onFovChange: this.onPhotoFovChange,
     });
+    this.scanner = new Scanner({
+      planetType: this.currentPlanet,
+      planetRadius: planet.config.radius,
+      surfaceMesh: planet.mesh,
+    });
+    this.sampleCollector = new SampleCollector({
+      planetType: this.currentPlanet,
+      planetRadius: planet.config.radius,
+    });
+    this.sciencePanel = new SciencePanel();
+    this.sciencePanel.setScannerActive(false);
+    this.sciencePanel.setCollectionLog(this.sampleCollector.getInventory());
 
     // ESC返回轨道
     window.addEventListener('keydown', this.onKeyDown);
@@ -188,7 +206,14 @@ export class App implements IDisposable {
     if (this.photoModeActive) {
       return;
     }
-
+    if (e.code === 'KeyE' && !e.repeat) {
+      this.toggleScanner();
+      return;
+    }
+    if (e.code === 'KeyF' && !e.repeat) {
+      this.collectSample();
+      return;
+    }
     if (e.code === 'KeyM' && !e.repeat) {
       this.minimapFullscreen = !this.minimapFullscreen;
       this.minimap.setFullscreen(this.minimapFullscreen);
@@ -320,6 +345,27 @@ export class App implements IDisposable {
     return String(value).padStart(2, '0');
   }
 
+  private toggleScanner(): void {
+    const next = !this.scanner.isActive;
+    this.scanner.setActive(next);
+    this.sciencePanel.setScannerActive(next);
+    this.sciencePanel.showActionMessage(
+      next ? '扫描仪已启动。' : '扫描仪已关闭。',
+      next,
+    );
+  }
+
+  private collectSample(): void {
+    if (!this.isInSurfaceMode()) {
+      this.sciencePanel.showActionMessage('请先降落到地表后再采集样本。');
+      return;
+    }
+
+    const result = this.sampleCollector.collect(this.playerController.state.position);
+    this.sciencePanel.showActionMessage(result.message, result.ok);
+    this.sciencePanel.setCollectionLog(this.sampleCollector.getInventory());
+  }
+
   private computePlayerHeading(
     quaternion: THREE.Quaternion,
     up: THREE.Vector3,
@@ -437,6 +483,13 @@ export class App implements IDisposable {
 
     // 切换环境音
     this.audioManager.setPlanet(planetType);
+    this.scanner.switchPlanet({
+      planetType,
+      planetRadius: nextPlanet.config.radius,
+      surfaceMesh: nextPlanet.mesh,
+    });
+    this.sampleCollector.switchPlanet(planetType, nextPlanet.config.radius);
+    this.sciencePanel.updateNearbyTarget(null);
 
     this.currentPlanet = planetType;
     this.planetSelector.setActive(planetType);
@@ -501,6 +554,14 @@ export class App implements IDisposable {
         );
       }
 
+      if (this.scanner.isActive) {
+        this.sciencePanel.updateScanData(this.scanner.scan(this.cameraSystem.camera));
+      }
+      const nearbyTarget = inSurfaceMode
+        ? this.sampleCollector.getNearbyTarget(this.playerController.state.position)
+        : null;
+      this.sciencePanel.updateNearbyTarget(nearbyTarget);
+
       // 更新星球特效（云层/夜景/海洋）
       this.planet.update(delta);
 
@@ -558,6 +619,7 @@ export class App implements IDisposable {
     this.guidePanel.dispose();
     this.landButton.dispose();
     this.minimap.dispose();
+    this.sciencePanel.dispose();
     this.weatherSystem.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
