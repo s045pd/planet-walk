@@ -55,6 +55,7 @@ export class DayNightCycle {
   private planetRadius: number;
   private readonly axialTiltRad: number;
   private readonly simHoursPerSecond: number;
+  private observerDistance = 0;
 
   private utcTimeHours: number;
   private timeScaleIndex = 0;
@@ -138,6 +139,7 @@ export class DayNightCycle {
   private applyEnvironment(observerPosition: THREE.Vector3): void {
     if (observerPosition.lengthSq() > 1e-6) {
       this.observerUp.copy(observerPosition).normalize();
+      this.observerDistance = observerPosition.length();
     }
 
     const sunDot = this.observerUp.dot(this.sunDirection);
@@ -178,10 +180,21 @@ export class DayNightCycle {
         .lerp(this.dayBottomColor, daylight);
     }
 
+    // skybox 只在地表附近可见（相机靠近星球时），轨道模式下完全透明
+    const altitudeFactor = this.getAltitudeFactor();
     const brightnessUniform = this.skyboxUniforms.brightness;
     if (brightnessUniform) {
-      brightnessUniform.value = THREE.MathUtils.lerp(0.38, 1.0, daylight) + twilight * 0.22;
+      const baseBrightness = THREE.MathUtils.lerp(0.0, 1.0, daylight) + twilight * 0.22;
+      brightnessUniform.value = baseBrightness * altitudeFactor;
     }
+  }
+
+  /** skybox 只在地表附近可见，轨道高度时淡出到0 */
+  private getAltitudeFactor(): number {
+    if (this.observerDistance <= 0) return 0;
+    const surfaceAlt = this.observerDistance / this.planetRadius;
+    // 1.0 = 地表，1.5 = 开始淡出，3.0 = 完全消失
+    return 1 - THREE.MathUtils.smoothstep(surfaceAlt, 1.5, 3.0);
   }
 
   private updateStars(daylight: number, twilight: number): void {
