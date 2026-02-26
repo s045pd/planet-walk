@@ -94,6 +94,7 @@ export class SceneManager implements IDisposable {
     });
 
     this.skybox = new THREE.Mesh(geometry, material);
+    this.skybox.renderOrder = -100;
     this.scene.add(this.skybox);
   }
 
@@ -126,7 +127,8 @@ export class SceneManager implements IDisposable {
     const material = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      blending: THREE.NormalBlending,
       uniforms: {
         visibility: visibilityUniform,
         sizeMultiplier: { value: starSizeMultiplier },
@@ -141,7 +143,8 @@ export class SceneManager implements IDisposable {
         void main() {
           vBrightness = brightness;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = max(3.0, size * sizeMultiplier * (84000.0 / max(-mvPosition.z, 1.0)));
+          float dist = length(mvPosition.xyz);
+          gl_PointSize = max(2.0, size * sizeMultiplier * (300.0 / max(dist * 0.004, 1.0)));
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
@@ -152,11 +155,11 @@ export class SceneManager implements IDisposable {
 
         void main() {
           float d = distance(gl_PointCoord, vec2(0.5));
-          float core = smoothstep(0.5, 0.0, d);
-          float halo = smoothstep(0.88, 0.16, d) * 0.5;
-          float glow = (core + halo) * vBrightness * brightnessBoost;
-          float alpha = glow * visibility;
-          vec3 color = vec3(0.9, 0.94, 1.0) * glow;
+          if (d > 0.5) discard;
+          float core = smoothstep(0.5, 0.05, d);
+          float glow = core * vBrightness * brightnessBoost;
+          float alpha = clamp(glow * visibility, 0.0, 1.0);
+          vec3 color = vec3(0.92, 0.95, 1.0) * glow;
           gl_FragColor = vec4(color, alpha);
         }
       `,
@@ -164,6 +167,7 @@ export class SceneManager implements IDisposable {
 
     this.stars = new THREE.Points(geometry, material);
     this.stars.frustumCulled = false;
+    this.stars.renderOrder = -90;
     this.scene.add(this.stars);
 
     const milkyCount = Math.max(2200, Math.floor(STAR_COUNT * 0.5));
@@ -201,7 +205,8 @@ export class SceneManager implements IDisposable {
     const milkyMaterial = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      blending: THREE.NormalBlending,
       uniforms: {
         visibility: visibilityUniform,
         sizeMultiplier: { value: starSizeMultiplier },
@@ -216,7 +221,8 @@ export class SceneManager implements IDisposable {
         void main() {
           vBrightness = brightness;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = max(1.6, size * sizeMultiplier * (78000.0 / max(-mvPosition.z, 1.0)));
+          float dist = length(mvPosition.xyz);
+          gl_PointSize = max(1.2, size * sizeMultiplier * (280.0 / max(dist * 0.004, 1.0)));
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
@@ -227,11 +233,11 @@ export class SceneManager implements IDisposable {
 
         void main() {
           float d = distance(gl_PointCoord, vec2(0.5));
-          float core = smoothstep(0.58, 0.02, d) * 0.45;
-          float halo = smoothstep(0.92, 0.2, d) * 0.85;
-          float bandGlow = (core + halo) * vBrightness * brightnessBoost;
-          float alpha = bandGlow * visibility * 0.78;
-          vec3 color = mix(vec3(0.46, 0.56, 0.86), vec3(0.85, 0.88, 1.0), vBrightness) * bandGlow;
+          if (d > 0.5) discard;
+          float core = smoothstep(0.5, 0.05, d) * 0.6;
+          float glow = core * vBrightness * brightnessBoost;
+          float alpha = clamp(glow * visibility * 0.78, 0.0, 1.0);
+          vec3 color = mix(vec3(0.46, 0.56, 0.86), vec3(0.85, 0.88, 1.0), vBrightness) * glow;
           gl_FragColor = vec4(color, alpha);
         }
       `,
@@ -239,6 +245,7 @@ export class SceneManager implements IDisposable {
 
     this.milkyWay = new THREE.Points(milkyGeometry, milkyMaterial);
     this.milkyWay.frustumCulled = false;
+    this.milkyWay.renderOrder = -80;
     this.scene.add(this.milkyWay);
   }
 
