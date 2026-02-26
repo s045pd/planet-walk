@@ -39,6 +39,8 @@ import type { AchievementToast } from './ui/AchievementToast';
 import { DayNightCycle } from './environment/DayNightCycle';
 import { HelpOverlay } from './ui/HelpOverlay';
 import { SettingsPanel } from './ui/SettingsPanel';
+import { ShareCard } from './ui/ShareCard';
+import type { ShareCardState } from './ui/ShareCard';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -74,6 +76,7 @@ export class App implements IDisposable {
   private achievementToast: AchievementToast | null = null;
   private helpOverlay: HelpOverlay;
   private settingsPanel: SettingsPanel;
+  private shareCard: ShareCard;
   private achievementUnsubscribes: Array<() => void> = [];
   private hiddenPois: HiddenPoi[] = [];
   private planetSampleTypes: Partial<Record<PlanetType, SampleType>> = {};
@@ -199,6 +202,7 @@ export class App implements IDisposable {
         this.filterManager.resize(window.innerWidth, window.innerHeight, pixelRatio);
       },
     });
+    this.shareCard = new ShareCard();
 
     this.dayNightCycle = new DayNightCycle({
       planetRadius: planet.config.radius,
@@ -591,21 +595,25 @@ export class App implements IDisposable {
 
   private captureScreenshot = (): void => {
     this.audioManager.playUIClick();
-    const now = new Date();
-    const stamp = `${now.getFullYear()}${this.pad2(now.getMonth() + 1)}${this.pad2(now.getDate())}-${this.pad2(now.getHours())}${this.pad2(now.getMinutes())}${this.pad2(now.getSeconds())}`;
-    const link = document.createElement('a');
-    link.href = this.engine.renderer.domElement.toDataURL('image/png');
-    link.download = `planet-walk-photo-${stamp}.png`;
-    link.click();
+    const screenshotDataUrl = this.engine.renderer.domElement.toDataURL('image/png');
+    const playerGeo = cartesianToGeo(
+      this.playerController.state.position,
+      this.planet.config.radius,
+    );
+    const state: ShareCardState = {
+      planet: this.currentPlanet,
+      lat: playerGeo.lat,
+      lng: playerGeo.lng,
+      yaw: this.cameraSystem.camera.rotation.y,
+      pitch: this.cameraSystem.camera.rotation.x,
+      capturedAt: new Date(),
+    };
+    this.shareCard.open({ screenshotDataUrl, state });
     this.recordAchievementEvent({
       type: 'photo_taken',
       planet: this.currentPlanet,
     });
   };
-
-  private pad2(value: number): string {
-    return String(value).padStart(2, '0');
-  }
 
   private async toggleScanner(): Promise<void> {
     await this.ensureScienceSystem();
@@ -1071,6 +1079,7 @@ export class App implements IDisposable {
     this.achievementToast?.dispose();
     this.helpOverlay.dispose();
     this.settingsPanel.dispose();
+    this.shareCard.dispose();
     this.achievementManager?.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
