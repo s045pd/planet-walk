@@ -39,8 +39,8 @@ export class DayNightCycle {
   private readonly dayBottomColor = new THREE.Color(0xd7ecff);
   private readonly twilightTopColor = new THREE.Color(0xff8f57);
   private readonly twilightBottomColor = new THREE.Color(0xffc892);
-  private readonly nightTopColor = new THREE.Color(0x050915);
-  private readonly nightBottomColor = new THREE.Color(0x010207);
+  private readonly nightTopColor = new THREE.Color(0x0b1432);
+  private readonly nightBottomColor = new THREE.Color(0x050916);
 
   private readonly sunDayColor = new THREE.Color(0xfff6dd);
   private readonly sunTwilightColor = new THREE.Color(0xffa86f);
@@ -48,7 +48,7 @@ export class DayNightCycle {
 
   private readonly ambientDayColor = new THREE.Color(0xb9d2ff);
   private readonly ambientTwilightColor = new THREE.Color(0x8f7898);
-  private readonly ambientNightColor = new THREE.Color(0x1d2636);
+  private readonly ambientNightColor = new THREE.Color(0x2a3750);
 
   private readonly scratchColor = new THREE.Color();
 
@@ -75,7 +75,7 @@ export class DayNightCycle {
     this.axialTiltRad = THREE.MathUtils.degToRad(23.5);
     const baseDayDurationSeconds = options.baseDayDurationSeconds ?? 600;
     this.simHoursPerSecond = HOURS_PER_DAY / Math.max(baseDayDurationSeconds, 1);
-    this.utcTimeHours = this.normalizeHours(options.initialTimeHours ?? 10.5);
+    this.utcTimeHours = this.normalizeHours(options.initialTimeHours ?? 15.5);
 
     this.updateSunDirection();
     this.applyEnvironment(new THREE.Vector3(1, 0, 0));
@@ -150,7 +150,7 @@ export class DayNightCycle {
       .lerp(this.sunDayColor, daylight);
     this.sunLight.color.copy(this.scratchColor);
 
-    this.ambientLight.intensity = THREE.MathUtils.lerp(0.08, 0.36, daylight) + warmTwilight * 0.06;
+    this.ambientLight.intensity = THREE.MathUtils.lerp(0.14, 0.42, daylight) + warmTwilight * 0.08;
     this.scratchColor.copy(this.ambientNightColor)
       .lerp(this.ambientTwilightColor, warmTwilight)
       .lerp(this.ambientDayColor, daylight);
@@ -179,7 +179,7 @@ export class DayNightCycle {
 
     const brightnessUniform = this.skyboxUniforms.brightness;
     if (brightnessUniform) {
-      brightnessUniform.value = THREE.MathUtils.lerp(0.24, 1.0, daylight) + twilight * 0.2;
+      brightnessUniform.value = THREE.MathUtils.lerp(0.38, 1.0, daylight) + twilight * 0.22;
     }
   }
 
@@ -187,7 +187,7 @@ export class DayNightCycle {
     const visibilityUniform = this.starsUniforms.visibility;
     if (!visibilityUniform) return;
 
-    const visibility = THREE.MathUtils.clamp(1 - daylight * 0.95 + twilight * 0.15, 0.04, 1.0);
+    const visibility = THREE.MathUtils.clamp(1 - daylight * 0.95 + twilight * 0.15, 0.08, 1.0);
     visibilityUniform.value = visibility;
   }
 

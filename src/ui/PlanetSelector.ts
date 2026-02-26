@@ -27,6 +27,7 @@ export class PlanetSelector implements IDisposable {
     this.root.style.borderRadius = '10px';
     this.root.style.backdropFilter = 'blur(4px)';
     this.root.style.zIndex = '20';
+    this.root.style.pointerEvents = 'none';
 
     this.buttons = {
       earth: this.createButton('地球', 'earth'),
@@ -72,6 +73,7 @@ export class PlanetSelector implements IDisposable {
     button.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif';
     button.style.cursor = 'pointer';
     button.style.transition = 'background-color 120ms ease, color 120ms ease, border-color 120ms ease';
+    button.style.pointerEvents = 'auto';
     button.addEventListener('click', () => {
       this.onPlanetSelect(planet);
     });

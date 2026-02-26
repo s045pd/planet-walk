@@ -20,7 +20,7 @@ export class LandmarkMarker {
 
     // 标记点 — 发光小球
     const pinMap = this.createPinTexture();
-    const pinMat = new THREE.SpriteMaterial({ map: pinMap, depthTest: false, transparent: true });
+    const pinMat = new THREE.SpriteMaterial({ map: pinMap, depthTest: true, transparent: true });
     this.sprite = new THREE.Sprite(pinMat);
     this.sprite.scale.set(radius * 0.008, radius * 0.008, 1);
     // 沿法线方向抬高
@@ -30,7 +30,7 @@ export class LandmarkMarker {
 
     // 文字标签
     const labelMap = this.createLabelTexture(landmark.name);
-    const labelMat = new THREE.SpriteMaterial({ map: labelMap, depthTest: false, transparent: true });
+    const labelMat = new THREE.SpriteMaterial({ map: labelMap, depthTest: true, transparent: true });
     this.label = new THREE.Sprite(labelMat);
     this.label.scale.set(radius * 0.025, radius * 0.008, 1);
     const labelOffset = this.position.clone().normalize().multiplyScalar(radius * 0.025);
