@@ -31,6 +31,7 @@ export interface PlayerControllerConfig {
   gravity?: number;
   moveSpeed?: number;
   jumpForce?: number;
+  onFootstep?: (planetId: string) => void;
 }
 
 /** 球面第一人称控制器：WASD 移动 + 鼠标视角 + 跳跃 */
@@ -46,6 +47,7 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   private moveSpeed: number;
   private jumpForce: number;
+  private readonly onFootstep: ((planetId: string) => void) | null;
   private _syncCameraInController = true;
   private _mouseLookHandler: ((dx: number, dy: number) => void) | null = null;
 
@@ -66,6 +68,7 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   /** 地形检测射线长度（会按位移高度动态更新） */
   private terrainProbeDistance = 24;
+  private footstepCooldown = 0;
 
   private readonly groundRaycaster = new THREE.Raycaster();
   private readonly heightReadCanvas = document.createElement('canvas');
@@ -89,6 +92,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.surfaceMeshes = config.surfaceMeshes;
     this.moveSpeed = config.moveSpeed ?? BASE_SPEED;
     this.jumpForce = config.jumpForce ?? 4;
+    this.onFootstep = config.onFootstep ?? null;
 
     // 初始位置：星球表面正上方
     const startPos = new THREE.Vector3(0, config.planetRadius + 2, 0);
@@ -120,6 +124,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.applyVelocity(dt);
     this.resolveTerrainCollision(dt);
     this.alignToSurface(dt);
+    this.updateFootsteps(dt);
     if (this._syncCameraInController) {
       this.firstPerson.update(this.state);
     }
@@ -153,6 +158,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.state.quaternion.setFromUnitVectors(this._worldUp, this._surfaceDir);
     this.state.resetVelocity();
     this.state.onGround = false;
+    this.footstepCooldown = 0;
     this.firstPerson.update(this.state);
   }
 
@@ -266,6 +272,39 @@ export class PlayerController implements IUpdatable, IDisposable {
 
   private alignToSurface(dt: number): void {
     this.gravity.alignToSurface(this.state, dt);
+  }
+
+  private updateFootsteps(dt: number): void {
+    if (!this.onFootstep) {
+      return;
+    }
+
+    const axis = this.input.getMovementAxis();
+    const hasMovementInput =
+      Math.abs(axis.forward) > 1e-3 ||
+      Math.abs(axis.right) > 1e-3;
+    if (!this.state.onGround || !hasMovementInput) {
+      this.footstepCooldown = 0;
+      return;
+    }
+
+    this._surfaceDir.copy(this.state.velocity);
+    const normalSpeed = this._surfaceDir.dot(this.state.up);
+    this._surfaceDir.addScaledVector(this.state.up, -normalSpeed);
+    const horizontalSpeed = this._surfaceDir.length();
+    if (horizontalSpeed < 0.2) {
+      this.footstepCooldown = 0;
+      return;
+    }
+
+    this.footstepCooldown -= dt;
+    if (this.footstepCooldown > 0) {
+      return;
+    }
+
+    this.onFootstep(this.state.currentPlanet);
+    const cadence = THREE.MathUtils.clamp(horizontalSpeed / this.moveSpeed, 0.65, 1.5);
+    this.footstepCooldown = THREE.MathUtils.clamp(0.44 / cadence, 0.18, 0.55);
   }
 
   private getHitDisplacement(hit: THREE.Intersection): number {
@@ -397,6 +436,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.state.position.copy(this._surfaceDir).multiplyScalar(config.planetRadius + 2);
     this.state.up.copy(this._surfaceDir);
     this.state.quaternion.setFromUnitVectors(this._worldUp, this._surfaceDir);
+    this.footstepCooldown = 0;
   }
 
   dispose(): void {

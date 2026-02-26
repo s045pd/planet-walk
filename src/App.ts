@@ -116,9 +116,16 @@ export class App implements IDisposable {
     this.cameraSystem = new CameraSystem();
     this.inputManager = new InputManager(canvas);
     this.hud = new HUD();
+
+    // 音效系统
+    this.audioManager = AudioManager.getInstance();
+
     this.planetSelector = new PlanetSelector({
       initialPlanet: this.currentPlanet,
-      onPlanetSelect: this.switchPlanet,
+      onPlanetSelect: (planetType) => {
+        this.audioManager.playUIClick();
+        this.switchPlanet(planetType);
+      },
     });
 
     this.playerController = new PlayerController({
@@ -129,6 +136,9 @@ export class App implements IDisposable {
       planetRadius: planet.config.radius,
       gravity: planet.config.gravity,
       surfaceMeshes: [planet.mesh],
+      onFootstep: (planetId) => {
+        this.audioManager.playFootstep(planetId);
+      },
     });
 
     this.cameraManager = new CameraManager({
@@ -145,9 +155,6 @@ export class App implements IDisposable {
     this.loadingScreen = new LoadingScreen();
     this.performanceMonitor = new PerformanceMonitor();
 
-    // 音效系统
-    this.audioManager = AudioManager.getInstance();
-
     // 地标导航
     this.landmarkManager = new LandmarkManager(this.cameraSystem.camera);
     this.landmarkManager.loadPlanet(planet.config, planet.root);
@@ -160,7 +167,10 @@ export class App implements IDisposable {
 
     // 降落按钮
     this.landButton = new LandButton();
-    this.landButton.setOnClick(() => this.landOnSurface());
+    this.landButton.setOnClick(() => {
+      this.audioManager.playUIClick();
+      this.landOnSurface();
+    });
 
     // 小地图
     this.minimap = new Minimap();
@@ -352,6 +362,7 @@ export class App implements IDisposable {
         }
         this.achievementUnsubscribes.push(
           manager.onUnlock((status) => {
+            this.audioManager.playAchievementUnlock();
             this.achievementToast?.show(status);
           }),
         );
@@ -387,12 +398,14 @@ export class App implements IDisposable {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.code === 'KeyH' && !e.repeat) {
+      this.audioManager.playUIClick();
       this.helpOverlay.toggle();
       return;
     }
 
     if (this.helpOverlay.isOpen) {
       if (e.key === 'Escape') {
+        this.audioManager.playUIClick();
         this.helpOverlay.close();
       }
       return;
@@ -400,16 +413,19 @@ export class App implements IDisposable {
 
     if (e.code === 'Tab' && !e.repeat) {
       e.preventDefault();
+      this.audioManager.playUIClick();
       void this.toggleAchievementPanel();
       return;
     }
 
     if (e.code === 'KeyP' && !e.repeat) {
+      this.audioManager.playUIClick();
       void this.togglePhotoMode();
       return;
     }
 
     if (e.code === 'KeyT' && !e.repeat) {
+      this.audioManager.playUIClick();
       this.dayNightCycle.cycleTimeScale();
       return;
     }
@@ -418,6 +434,7 @@ export class App implements IDisposable {
       return;
     }
     if (e.code === 'KeyE' && !e.repeat) {
+      this.audioManager.playUIClick();
       void this.toggleScanner();
       return;
     }
@@ -426,26 +443,31 @@ export class App implements IDisposable {
       return;
     }
     if (e.code === 'KeyM' && !e.repeat) {
+      this.audioManager.playUIClick();
       this.minimapFullscreen = !this.minimapFullscreen;
       this.minimap.setFullscreen(this.minimapFullscreen);
       return;
     }
     if (e.key === 'Escape') {
       if (this.achievementPanel?.isOpen) {
+        this.audioManager.playUIClick();
         this.achievementPanel.close();
         return;
       }
       if (this.cameraManager.mode !== 'orbit') {
+        this.audioManager.playUIClick();
         this.returnToOrbit();
       }
     }
   };
 
   private onPhotoFilterChange = (filter: PhotoFilterType): void => {
+    this.audioManager.playUIClick();
     this.filterManager.setFilter(filter);
   };
 
   private onPhotoHUDToggle = (hidden: boolean): void => {
+    this.audioManager.playUIClick();
     this.photoModeHideHUD = hidden;
     if (this.photoModeActive) {
       this.hud.setVisible(!hidden);
@@ -551,6 +573,7 @@ export class App implements IDisposable {
   }
 
   private captureScreenshot = (): void => {
+    this.audioManager.playUIClick();
     const now = new Date();
     const stamp = `${now.getFullYear()}${this.pad2(now.getMonth() + 1)}${this.pad2(now.getDate())}-${this.pad2(now.getHours())}${this.pad2(now.getMinutes())}${this.pad2(now.getSeconds())}`;
     const link = document.createElement('a');
