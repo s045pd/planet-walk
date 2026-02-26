@@ -11,10 +11,13 @@ export class PlanetSelector implements IDisposable {
   private readonly root: HTMLDivElement;
   private readonly buttons: Record<PlanetType, HTMLButtonElement>;
   private readonly onPlanetSelect: (planet: PlanetType) => void;
+  private activePlanet: PlanetType;
   private visible = true;
+  private disabled = false;
 
   constructor(config: PlanetSelectorConfig) {
     this.onPlanetSelect = config.onPlanetSelect;
+    this.activePlanet = config.initialPlanet;
     this.root = document.createElement('div');
     this.root.style.position = 'fixed';
     this.root.style.top = '16px';
@@ -41,13 +44,25 @@ export class PlanetSelector implements IDisposable {
   }
 
   setActive(planet: PlanetType): void {
+    this.activePlanet = planet;
     (Object.keys(this.buttons) as PlanetType[]).forEach((type) => {
       const isActive = type === planet;
       const button = this.buttons[type];
       button.style.background = isActive ? '#78b7ff' : 'rgba(14, 26, 46, 0.9)';
       button.style.color = isActive ? '#051224' : '#d9e8ff';
       button.style.borderColor = isActive ? '#a8d4ff' : 'rgba(155, 188, 255, 0.45)';
+      button.style.opacity = this.disabled ? '0.45' : '1';
+      button.style.cursor = this.disabled ? 'not-allowed' : 'pointer';
+      button.disabled = this.disabled;
     });
+  }
+
+  setDisabled(disabled: boolean): void {
+    if (this.disabled === disabled) {
+      return;
+    }
+    this.disabled = disabled;
+    this.setActive(this.activePlanet);
   }
 
   setVisible(visible: boolean): void {
@@ -75,8 +90,12 @@ export class PlanetSelector implements IDisposable {
     button.style.transition = 'background-color 120ms ease, color 120ms ease, border-color 120ms ease';
     button.style.pointerEvents = 'auto';
     button.addEventListener('click', () => {
+      if (this.disabled) {
+        return;
+      }
       this.onPlanetSelect(planet);
     });
     return button;
   }
+
 }

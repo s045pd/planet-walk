@@ -19,6 +19,7 @@ export class Minimap implements IDisposable {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
   private readonly overlay: HTMLDivElement;
+  private readonly fullscreenHint: HTMLDivElement;
 
   private visible = true;
   private fullscreen = false;
@@ -39,6 +40,21 @@ export class Minimap implements IDisposable {
     this.overlay.style.pointerEvents = 'none';
     this.overlay.style.display = 'none';
     document.body.appendChild(this.overlay);
+
+    this.fullscreenHint = document.createElement('div');
+    this.fullscreenHint.style.position = 'fixed';
+    this.fullscreenHint.style.padding = '6px 10px';
+    this.fullscreenHint.style.borderRadius = '8px';
+    this.fullscreenHint.style.border = '1px solid rgba(255, 255, 255, 0.45)';
+    this.fullscreenHint.style.background = 'rgba(8, 12, 20, 0.82)';
+    this.fullscreenHint.style.color = '#f4f8ff';
+    this.fullscreenHint.style.fontFamily = 'ui-sans-serif, system-ui, sans-serif';
+    this.fullscreenHint.style.fontSize = '12px';
+    this.fullscreenHint.style.zIndex = '61';
+    this.fullscreenHint.style.pointerEvents = 'none';
+    this.fullscreenHint.style.display = 'none';
+    this.fullscreenHint.textContent = 'Press M to close';
+    document.body.appendChild(this.fullscreenHint);
 
     this.canvas = document.createElement('canvas');
     this.canvas.style.position = 'fixed';
@@ -154,6 +170,7 @@ export class Minimap implements IDisposable {
     window.removeEventListener('resize', this.onResize);
     this.canvas.remove();
     this.overlay.remove();
+    this.fullscreenHint.remove();
   }
 
   private onResize = (): void => {
@@ -181,6 +198,9 @@ export class Minimap implements IDisposable {
       this.canvas.style.right = 'auto';
       this.canvas.style.bottom = 'auto';
       this.canvas.style.transform = 'translate(-50%, -50%)';
+      this.fullscreenHint.style.left = '50%';
+      this.fullscreenHint.style.top = `calc(50% + ${Math.floor(this.cssSize * 0.5) - 28}px)`;
+      this.fullscreenHint.style.transform = 'translateX(-50%)';
     } else {
       this.cssSize = 220;
       this.mapRadius = 100;
@@ -190,6 +210,11 @@ export class Minimap implements IDisposable {
       this.canvas.style.right = '24px';
       this.canvas.style.bottom = '24px';
       this.canvas.style.transform = 'none';
+      this.fullscreenHint.style.left = 'auto';
+      this.fullscreenHint.style.top = 'auto';
+      this.fullscreenHint.style.right = '24px';
+      this.fullscreenHint.style.bottom = '252px';
+      this.fullscreenHint.style.transform = 'none';
     }
 
     const dpr = window.devicePixelRatio || 1;
@@ -205,6 +230,8 @@ export class Minimap implements IDisposable {
   private applyVisibility(): void {
     this.canvas.style.display = this.visible ? 'block' : 'none';
     this.overlay.style.display =
+      this.visible && this.fullscreen ? 'block' : 'none';
+    this.fullscreenHint.style.display =
       this.visible && this.fullscreen ? 'block' : 'none';
   }
 

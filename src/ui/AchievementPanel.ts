@@ -70,6 +70,13 @@ export class AchievementPanel implements IDisposable {
     const header = document.createElement('div');
     header.style.padding = '18px 18px 12px 18px';
     header.style.borderBottom = '1px solid rgba(130, 177, 255, 0.28)';
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'flex-start';
+    header.style.gap = '10px';
+
+    const headerLeft = document.createElement('div');
+    headerLeft.style.minWidth = '0';
 
     const title = document.createElement('div');
     title.textContent = '成就';
@@ -77,12 +84,28 @@ export class AchievementPanel implements IDisposable {
     title.style.fontWeight = '700';
 
     const subtitle = document.createElement('div');
-    subtitle.textContent = '按 Tab 或点击空白区域关闭';
+    subtitle.textContent = 'Press Tab to close';
     subtitle.style.marginTop = '4px';
     subtitle.style.fontSize = '12px';
     subtitle.style.opacity = '0.75';
 
-    header.append(title, subtitle);
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.textContent = '✕';
+    closeButton.setAttribute('aria-label', 'Close achievement panel');
+    closeButton.style.width = '28px';
+    closeButton.style.height = '28px';
+    closeButton.style.borderRadius = '8px';
+    closeButton.style.border = '1px solid rgba(148, 196, 255, 0.55)';
+    closeButton.style.background = 'rgba(10, 23, 42, 0.95)';
+    closeButton.style.color = '#eef6ff';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.fontSize = '14px';
+    closeButton.style.lineHeight = '1';
+    closeButton.addEventListener('click', () => this.close());
+
+    headerLeft.append(title, subtitle);
+    header.append(headerLeft, closeButton);
 
     this.content = document.createElement('div');
     this.content.style.flex = '1';

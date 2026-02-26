@@ -17,7 +17,6 @@ export class HUD implements IDisposable {
   private readonly planetLine: HTMLDivElement;
   private readonly geoLine: HTMLDivElement;
   private readonly timeLine: HTMLDivElement;
-  private readonly worldLine: HTMLDivElement;
   private visible = true;
 
   constructor() {
@@ -42,9 +41,8 @@ export class HUD implements IDisposable {
     this.planetLine = document.createElement('div');
     this.geoLine = document.createElement('div');
     this.timeLine = document.createElement('div');
-    this.worldLine = document.createElement('div');
 
-    this.root.append(this.planetLine, this.geoLine, this.timeLine, this.worldLine);
+    this.root.append(this.planetLine, this.geoLine, this.timeLine);
     document.body.appendChild(this.root);
   }
 
@@ -55,8 +53,6 @@ export class HUD implements IDisposable {
       `Lat: ${data.lat.toFixed(2)}°, Lng: ${data.lng.toFixed(2)}°, Alt: ${displayAlt.toFixed(1)} m`;
     this.timeLine.textContent =
       `Local Time: ${data.localTime} (${data.timeScaleLabel})`;
-    this.worldLine.textContent =
-      `X: ${data.position.x.toFixed(1)}  Y: ${data.position.y.toFixed(1)}  Z: ${data.position.z.toFixed(1)}`;
   }
 
   setVisible(visible: boolean): void {
