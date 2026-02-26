@@ -46,6 +46,9 @@ export class Planet implements IDisposable {
       map: proceduralMap,
       roughness: 1,
       metalness: 0,
+      transparent: false,
+      opacity: 1,
+      depthWrite: true,
       displacementScale: terrainHeightScale,
       displacementBias: terrainHeightScale > 0 ? -terrainHeightScale * 0.5 : 0,
     });
@@ -126,6 +129,7 @@ export class Planet implements IDisposable {
       this.earthEffects = new EarthEffects(config.radius, config.segments, {
         cloudsPath: config.textures.cloudsPath,
         nightPath: config.textures.nightPath,
+        oceanMaskPath: config.textures.specularPath,
         deferTextureLoad: true,
       });
       this.root.add(this.earthEffects.root);

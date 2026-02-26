@@ -2,13 +2,13 @@ import * as THREE from 'three';
 import type { IDisposable } from '../../core/types';
 
 const vertexShader = /* glsl */ `
-varying vec3 vNormal;
+varying vec3 vWorldNormal;
 varying vec2 vUv;
 varying vec3 vWorldPosition;
 
 void main() {
   vUv = uv;
-  vNormal = normalize(normalMatrix * normal);
+  vWorldNormal = normalize(mat3(modelMatrix) * normal);
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
   vWorldPosition = worldPos.xyz;
   gl_Position = projectionMatrix * viewMatrix * worldPos;
@@ -19,16 +19,16 @@ const fragmentShader = /* glsl */ `
 uniform sampler2D nightMap;
 uniform vec3 sunDirection;
 
-varying vec3 vNormal;
+varying vec3 vWorldNormal;
 varying vec2 vUv;
 varying vec3 vWorldPosition;
 
 void main() {
-  vec3 normal = normalize(vNormal);
+  vec3 normal = normalize(vWorldNormal);
   float dotNL = dot(normal, sunDirection);
 
   // 暗面过渡：完全背光时全亮，过渡带平滑衰减
-  float nightFactor = smoothstep(-0.1, -0.3, dotNL);
+  float nightFactor = 1.0 - smoothstep(-0.3, -0.05, dotNL);
 
   vec4 nightColor = texture2D(nightMap, vUv);
   gl_FragColor = vec4(nightColor.rgb * nightFactor, nightColor.a * nightFactor);
@@ -64,11 +64,13 @@ export class NightLights implements IDisposable {
       },
       transparent: true,
       blending: THREE.AdditiveBlending,
+      depthTest: true,
       depthWrite: false,
     });
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'earth-nightlights';
+    this.mesh.visible = false;
 
     if (autoLoad) {
       void this.loadTexture();
@@ -103,10 +105,12 @@ export class NightLights implements IDisposable {
             oldTexture.dispose();
           }
           this.textureLoaded = true;
+          this.mesh.visible = true;
           resolve();
         },
         undefined,
         () => {
+          this.mesh.visible = false;
           resolve();
         },
       );

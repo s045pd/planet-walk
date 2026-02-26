@@ -95,12 +95,14 @@ const FilterShader = {
 /** 照片模式后处理滤镜管理 */
 export class FilterManager implements IDisposable {
   private readonly composer: EffectComposer;
+  private readonly renderPass: RenderPass;
   private readonly filterPass: ShaderPass;
   private currentFilter: PhotoFilterType = 'normal';
 
   constructor(config: FilterManagerConfig) {
     this.composer = new EffectComposer(config.renderer);
-    this.composer.addPass(new RenderPass(config.scene, config.camera));
+    this.renderPass = new RenderPass(config.scene, config.camera);
+    this.composer.addPass(this.renderPass);
 
     this.filterPass = new ShaderPass(FilterShader);
     this.composer.addPass(this.filterPass);
@@ -130,6 +132,10 @@ export class FilterManager implements IDisposable {
 
   update(delta: number): void {
     this.filterPass.uniforms.uTime.value += Math.max(0, delta);
+  }
+
+  setCamera(camera: THREE.Camera): void {
+    this.renderPass.camera = camera;
   }
 
   render(delta: number): void {

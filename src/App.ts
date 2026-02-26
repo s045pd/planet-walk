@@ -1004,6 +1004,7 @@ export class App implements IDisposable {
       if (this.photoModeActive) {
         this.updateStatsState(delta, 0);
         this.photoMode?.update(delta);
+        this.filterManager.setCamera(this.cameraSystem.camera);
         this.filterManager.update(delta);
         this.filterManager.render(delta);
         return;
@@ -1074,6 +1075,7 @@ export class App implements IDisposable {
 
       this.performanceMonitor.update();
 
+      this.filterManager.setCamera(this.cameraSystem.camera);
       this.filterManager.update(delta);
       this.filterManager.render(delta);
 

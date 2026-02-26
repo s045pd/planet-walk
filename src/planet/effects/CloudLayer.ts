@@ -24,13 +24,14 @@ export class CloudLayer implements IDisposable {
 
     const material = new THREE.MeshPhongMaterial({
       transparent: true,
-      opacity: 0.4,
+      opacity: 0,
       depthWrite: false,
       side: THREE.FrontSide,
     });
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'earth-clouds';
+    this.mesh.visible = false;
 
     if (autoLoad) {
       void this.loadTexture();
@@ -63,7 +64,9 @@ export class CloudLayer implements IDisposable {
           const oldAlpha = material.alphaMap;
           material.map = tex;
           material.alphaMap = tex;
+          material.opacity = 0.4;
           material.needsUpdate = true;
+          this.mesh.visible = true;
 
           if (oldMap && oldMap !== tex) {
             oldMap.dispose();
@@ -76,6 +79,7 @@ export class CloudLayer implements IDisposable {
         },
         undefined,
         () => {
+          this.mesh.visible = false;
           resolve();
         },
       );

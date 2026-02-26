@@ -184,8 +184,8 @@ export class DayNightCycle {
     const altitudeFactor = this.getAltitudeFactor();
     const brightnessUniform = this.skyboxUniforms.brightness;
     if (brightnessUniform) {
-      const baseBrightness = THREE.MathUtils.lerp(0.0, 1.0, daylight) + twilight * 0.22;
-      brightnessUniform.value = baseBrightness * altitudeFactor;
+      const baseBrightness = THREE.MathUtils.smoothstep(daylight, 0.06, 0.2);
+      brightnessUniform.value = altitudeFactor > 0 ? baseBrightness * altitudeFactor : 0;
     }
   }
 
@@ -193,8 +193,10 @@ export class DayNightCycle {
   private getAltitudeFactor(): number {
     if (this.observerDistance <= 0) return 0;
     const surfaceAlt = this.observerDistance / this.planetRadius;
-    // 1.0 = 地表，1.5 = 开始淡出，3.0 = 完全消失
-    return 1 - THREE.MathUtils.smoothstep(surfaceAlt, 1.5, 3.0);
+    // 轨道视角(>1.5x半径)强制隐藏天空色
+    if (surfaceAlt >= 1.5) return 0;
+    // 1.0=地表，1.5=轨道阈值，区间内快速淡出
+    return 1 - THREE.MathUtils.smoothstep(surfaceAlt, 1.0, 1.5);
   }
 
   private updateStars(daylight: number, twilight: number): void {

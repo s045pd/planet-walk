@@ -1,17 +1,14 @@
 import * as THREE from 'three';
 import type { IDisposable } from '../../core/types';
 
-const BASE = import.meta.env.BASE_URL;
-const OCEAN_MASK_PATH = BASE + 'assets/textures/earth/ocean_mask.jpg';
-
 const vertexShader = /* glsl */ `
-varying vec3 vNormal;
+varying vec3 vWorldNormal;
 varying vec3 vViewDir;
 varying vec2 vUv;
 
 void main() {
   vUv = uv;
-  vNormal = normalize(normalMatrix * normal);
+  vWorldNormal = normalize(mat3(modelMatrix) * normal);
   vec4 worldPos = modelMatrix * vec4(position, 1.0);
   vViewDir = normalize(cameraPosition - worldPos.xyz);
   gl_Position = projectionMatrix * viewMatrix * worldPos;
@@ -25,12 +22,12 @@ uniform float fresnelPower;
 uniform float fresnelIntensity;
 uniform vec3 specularColor;
 
-varying vec3 vNormal;
+varying vec3 vWorldNormal;
 varying vec3 vViewDir;
 varying vec2 vUv;
 
 void main() {
-  vec3 normal = normalize(vNormal);
+  vec3 normal = normalize(vWorldNormal);
   vec3 viewDir = normalize(vViewDir);
 
   // 海洋 mask：白色=海洋
@@ -60,45 +57,58 @@ void main() {
 export class OceanEffect implements IDisposable {
   readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
 
-  constructor(planetRadius: number, segments: number) {
+  constructor(planetRadius: number, segments: number, oceanMaskPath?: string) {
     const radius = planetRadius * 1.002;
     const geometry = new THREE.SphereGeometry(radius, segments, segments);
+    const fallbackMask = this.createFallbackMaskTexture();
 
     const material = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
       uniforms: {
-        oceanMask: { value: null },
+        oceanMask: { value: fallbackMask },
         sunDirection: { value: new THREE.Vector3(1, 0, 0) },
         fresnelPower: { value: 3.0 },
         fresnelIntensity: { value: 0.8 },
         specularColor: { value: new THREE.Color(0.8, 0.9, 1.0) },
       },
       transparent: true,
+      depthTest: true,
       depthWrite: false,
     });
 
-    const loader = new THREE.TextureLoader();
-    loader.load(
-      OCEAN_MASK_PATH,
-      (tex) => {
-        tex.anisotropy = 8;
-        material.uniforms.oceanMask.value = tex;
-      },
-      undefined,
-      () => {
-        // 纹理缺失时用白色1x1纹理作为fallback（全球海洋高光）
-        const fallback = new THREE.DataTexture(
-          new Uint8Array([255, 255, 255, 255]), 1, 1,
-          THREE.RGBAFormat,
-        );
-        fallback.needsUpdate = true;
-        material.uniforms.oceanMask.value = fallback;
-      },
-    );
+    if (oceanMaskPath) {
+      const loader = new THREE.TextureLoader();
+      loader.load(
+        oceanMaskPath,
+        (tex) => {
+          tex.anisotropy = 8;
+          const old = material.uniforms.oceanMask.value as THREE.Texture | null;
+          material.uniforms.oceanMask.value = tex;
+          if (old && old !== tex) {
+            old.dispose();
+          }
+        },
+        undefined,
+        () => {
+          // 缺失纹理时维持fallback，不中断渲染。
+        },
+      );
+    }
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'earth-ocean';
+  }
+
+  private createFallbackMaskTexture(): THREE.DataTexture {
+    const fallback = new THREE.DataTexture(
+      new Uint8Array([255, 255, 255, 255]),
+      1,
+      1,
+      THREE.RGBAFormat,
+    );
+    fallback.needsUpdate = true;
+    return fallback;
   }
 
   setSunDirection(dir: THREE.Vector3): void {

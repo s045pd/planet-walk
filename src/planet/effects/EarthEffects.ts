@@ -7,6 +7,7 @@ import { OceanEffect } from './OceanEffect';
 export interface EarthEffectsConfig {
   cloudsPath?: string;
   nightPath?: string;
+  oceanMaskPath?: string;
   deferTextureLoad?: boolean;
 }
 
@@ -27,7 +28,7 @@ export class EarthEffects implements IDisposable {
     const autoLoad = !config?.deferTextureLoad;
     this.clouds = new CloudLayer(planetRadius, segments, config?.cloudsPath, autoLoad);
     this.nightLights = new NightLights(planetRadius, segments, config?.nightPath, autoLoad);
-    this.ocean = new OceanEffect(planetRadius, segments);
+    this.ocean = new OceanEffect(planetRadius, segments, config?.oceanMaskPath);
 
     this.root.add(this.clouds.mesh);
     this.root.add(this.nightLights.mesh);
