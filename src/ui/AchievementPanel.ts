@@ -77,7 +77,7 @@ export class AchievementPanel implements IDisposable {
     title.style.fontWeight = '700';
 
     const subtitle = document.createElement('div');
-    subtitle.textContent = 'Tab 关闭面板';
+    subtitle.textContent = '按 Tab 或点击空白区域关闭';
     subtitle.style.marginTop = '4px';
     subtitle.style.fontSize = '12px';
     subtitle.style.opacity = '0.75';

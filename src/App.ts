@@ -77,6 +77,7 @@ export class App implements IDisposable {
   private dayNightCycle: DayNightCycle;
   private minimapFullscreen = false;
   private wasInSurfaceMode = false;
+  private isLanding = false;
   private lastPlayerPosition: THREE.Vector3 | null = null;
   private lastWeatherTag: string | null = null;
   private clock = new THREE.Clock();
@@ -591,6 +592,10 @@ export class App implements IDisposable {
 
   /** 降落到地表 — 使用相机当前朝向的地表坐标 */
   private landOnSurface(): void {
+    if (this.isLanding) {
+      return;
+    }
+    this.isLanding = true;
     this.landButton.hide();
     this.guidePanel.fadeOut();
     const geo = cartesianToGeo(
@@ -598,6 +603,7 @@ export class App implements IDisposable {
       this.sceneManager.planetRadius,
     );
     this.cameraManager.animateToSurface(geo.lat, geo.lng, 2500).then(() => {
+      this.isLanding = false;
       this.guidePanel.showFirstPersonGuide();
     });
   }
@@ -642,7 +648,7 @@ export class App implements IDisposable {
   }
 
   private switchPlanet = (planetType: PlanetType): void => {
-    if (planetType === this.currentPlanet) {
+    if (planetType === this.currentPlanet || this.isLanding) {
       return;
     }
     if (this.photoModeActive) {

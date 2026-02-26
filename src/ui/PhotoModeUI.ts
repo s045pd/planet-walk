@@ -39,8 +39,8 @@ export class PhotoModeUI implements IDisposable {
     this.root = document.createElement('div');
     this.root.style.cssText = `
       position: fixed; left: 16px; bottom: 16px; z-index: 1001;
-      background: rgba(7, 14, 24, 0.84); border: 1px solid rgba(149, 201, 255, 0.35);
-      border-radius: 12px; padding: 14px; color: #eaf4ff;
+      background: rgba(7, 14, 24, 0.92); border: 1px solid rgba(149, 201, 255, 0.55);
+      border-radius: 12px; padding: 14px; color: #f0f6ff;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
       width: min(360px, calc(100vw - 32px)); backdrop-filter: blur(8px);
       box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
@@ -168,7 +168,7 @@ export class PhotoModeUI implements IDisposable {
     button.type = 'button';
     button.textContent = label;
     button.style.cssText =
-      'padding:6px 10px;border-radius:7px;border:1px solid rgba(149, 201, 255, 0.35);background:rgba(22, 36, 58, 0.95);color:#eaf4ff;cursor:pointer;font-size:12px;';
+      'padding:6px 10px;border-radius:7px;border:1px solid rgba(149, 201, 255, 0.5);background:rgba(30, 50, 80, 0.95);color:#f0f6ff;cursor:pointer;font-size:12px;font-weight:500;';
     button.addEventListener('click', () => {
       this.setFilter(filter);
       this.onFilterChange(filter);
