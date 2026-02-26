@@ -247,6 +247,11 @@ export class App implements IDisposable {
       return;
     }
 
+    if (e.code === 'KeyT' && !e.repeat) {
+      this.dayNightCycle.cycleTimeScale();
+      return;
+    }
+
     if (this.photoModeActive) {
       return;
     }
@@ -256,10 +261,6 @@ export class App implements IDisposable {
     }
     if (e.code === 'KeyF' && !e.repeat) {
       this.collectSample();
-      return;
-    }
-    if (e.code === 'KeyT' && !e.repeat) {
-      this.dayNightCycle.cycleTimeScale();
       return;
     }
     if (e.code === 'KeyM' && !e.repeat) {
