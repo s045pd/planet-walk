@@ -24,21 +24,18 @@ import type { ParticleSystem } from './effects/ParticleSystem';
 import { GuidePanel } from './ui/GuidePanel';
 import { LandButton } from './ui/LandButton';
 import { Minimap } from './ui/Minimap';
-import { WeatherSystem } from './weather/WeatherSystem';
-import { PhotoMode } from './camera/PhotoMode';
-import { PhotoModeUI } from './ui/PhotoModeUI';
 import { FilterManager } from './postprocess/FilterManager';
 import type { PhotoFilterType } from './postprocess/FilterManager';
-import { Scanner } from './science/Scanner';
-import { SampleCollector } from './science/SampleCollector';
-import { SciencePanel } from './ui/SciencePanel';
-import {
-  HIDDEN_POIS,
-  PLANET_SAMPLE_TYPES,
-} from './achievement/AchievementData';
-import { AchievementManager } from './achievement/AchievementManager';
-import { AchievementPanel } from './ui/AchievementPanel';
-import { AchievementToast } from './ui/AchievementToast';
+import type { WeatherSystem } from './weather/WeatherSystem';
+import type { PhotoMode } from './camera/PhotoMode';
+import type { PhotoModeUI } from './ui/PhotoModeUI';
+import type { Scanner } from './science/Scanner';
+import type { SampleCollector } from './science/SampleCollector';
+import type { SciencePanel } from './ui/SciencePanel';
+import type { HiddenPoi, SampleType } from './achievement/AchievementData';
+import type { AchievementEvent, AchievementManager } from './achievement/AchievementManager';
+import type { AchievementPanel } from './ui/AchievementPanel';
+import type { AchievementToast } from './ui/AchievementToast';
 import { DayNightCycle } from './environment/DayNightCycle';
 import { HelpOverlay } from './ui/HelpOverlay';
 
@@ -61,21 +58,30 @@ export class App implements IDisposable {
   private guidePanel: GuidePanel;
   private landButton: LandButton;
   private minimap: Minimap;
-  private weatherSystem: WeatherSystem;
-  private readonly photoMode: PhotoMode;
-  private readonly photoModeUI: PhotoModeUI;
+  private weatherSystem: WeatherSystem | null = null;
+  private photoMode: PhotoMode | null = null;
+  private photoModeUI: PhotoModeUI | null = null;
   private readonly filterManager: FilterManager;
   private photoModeActive = false;
   private photoModeHideHUD = true;
   private pointerLockEnabledBeforePhoto = false;
-  private scanner: Scanner;
-  private sampleCollector: SampleCollector;
-  private sciencePanel: SciencePanel;
-  private achievementManager: AchievementManager;
-  private achievementPanel: AchievementPanel;
-  private achievementToast: AchievementToast;
+  private scanner: Scanner | null = null;
+  private sampleCollector: SampleCollector | null = null;
+  private sciencePanel: SciencePanel | null = null;
+  private achievementManager: AchievementManager | null = null;
+  private achievementPanel: AchievementPanel | null = null;
+  private achievementToast: AchievementToast | null = null;
   private helpOverlay: HelpOverlay;
   private achievementUnsubscribes: Array<() => void> = [];
+  private hiddenPois: HiddenPoi[] = [];
+  private planetSampleTypes: Partial<Record<PlanetType, SampleType>> = {};
+  private weatherSystemPromise: Promise<void> | null = null;
+  private photoModePromise: Promise<void> | null = null;
+  private scienceSystemPromise: Promise<void> | null = null;
+  private achievementDataPromise: Promise<void> | null = null;
+  private achievementSystemPromise: Promise<void> | null = null;
+  private pendingAchievementEvents: AchievementEvent[] = [];
+  private disposed = false;
   private dayNightCycle: DayNightCycle;
   private minimapFullscreen = false;
   private wasInSurfaceMode = false;
@@ -162,13 +168,6 @@ export class App implements IDisposable {
     this.minimap.setBackgroundColor(planet.config.textures.fallbackColor);
     this.minimap.setVisible(false);
 
-    // 天气系统
-    this.weatherSystem = new WeatherSystem({
-      scene: this.sceneManager.scene,
-      planetRadius: planet.config.radius,
-      weather: planet.config.weather,
-    });
-
     this.filterManager = new FilterManager({
       renderer: this.engine.renderer,
       scene: this.sceneManager.scene,
@@ -180,37 +179,7 @@ export class App implements IDisposable {
       Math.min(window.devicePixelRatio, 2),
     );
 
-    this.photoMode = new PhotoMode({
-      camera: this.cameraSystem.camera,
-      input: this.inputManager,
-    });
-    this.photoModeUI = new PhotoModeUI({
-      onFilterChange: this.onPhotoFilterChange,
-      onCapture: this.captureScreenshot,
-      onHudToggle: this.onPhotoHUDToggle,
-      onFovChange: this.onPhotoFovChange,
-    });
-    this.scanner = new Scanner({
-      planetType: this.currentPlanet,
-      planetRadius: planet.config.radius,
-      surfaceMesh: planet.mesh,
-    });
-    this.sampleCollector = new SampleCollector({
-      planetType: this.currentPlanet,
-      planetRadius: planet.config.radius,
-    });
-    this.sciencePanel = new SciencePanel();
-    this.sciencePanel.setScannerActive(false);
-    this.sciencePanel.setCollectionLog(this.sampleCollector.getInventory());
-    this.achievementManager = new AchievementManager();
-    this.achievementPanel = new AchievementPanel(this.achievementManager);
-    this.achievementToast = new AchievementToast();
     this.helpOverlay = new HelpOverlay();
-    this.achievementUnsubscribes.push(
-      this.achievementManager.onUnlock((status) => {
-        this.achievementToast.show(status);
-      }),
-    );
 
     this.dayNightCycle = new DayNightCycle({
       planetRadius: planet.config.radius,
@@ -230,6 +199,180 @@ export class App implements IDisposable {
     window.addEventListener('keydown', this.onKeyDown);
 
     window.addEventListener('resize', this.onResize);
+  }
+
+  private scheduleDeferredPlanetTextures(): void {
+    requestAnimationFrame(() => {
+      if (this.disposed) {
+        return;
+      }
+      void this.planet.loadDeferredTextures();
+    });
+  }
+
+  private async ensureWeatherSystem(): Promise<void> {
+    if (this.weatherSystem || this.disposed) {
+      return;
+    }
+    if (!this.weatherSystemPromise) {
+      this.weatherSystemPromise = import('./weather/WeatherSystem')
+        .then(({ WeatherSystem }) => {
+          if (this.disposed || this.weatherSystem) {
+            return;
+          }
+          this.weatherSystem = new WeatherSystem({
+            scene: this.sceneManager.scene,
+            planetRadius: this.planet.config.radius,
+            weather: this.planet.config.weather,
+          });
+        })
+        .finally(() => {
+          this.weatherSystemPromise = null;
+        });
+    }
+    await this.weatherSystemPromise;
+  }
+
+  private async ensurePhotoModeSystem(): Promise<void> {
+    if ((this.photoMode && this.photoModeUI) || this.disposed) {
+      return;
+    }
+    if (!this.photoModePromise) {
+      this.photoModePromise = Promise.all([
+        import('./camera/PhotoMode'),
+        import('./ui/PhotoModeUI'),
+      ])
+        .then(([photoModeModule, photoModeUIModule]) => {
+          if (this.disposed || (this.photoMode && this.photoModeUI)) {
+            return;
+          }
+          this.photoMode = new photoModeModule.PhotoMode({
+            camera: this.cameraSystem.camera,
+            input: this.inputManager,
+          });
+          this.photoModeUI = new photoModeUIModule.PhotoModeUI({
+            onFilterChange: this.onPhotoFilterChange,
+            onCapture: this.captureScreenshot,
+            onHudToggle: this.onPhotoHUDToggle,
+            onFovChange: this.onPhotoFovChange,
+          });
+        })
+        .finally(() => {
+          this.photoModePromise = null;
+        });
+    }
+    await this.photoModePromise;
+  }
+
+  private async ensureScienceSystem(): Promise<void> {
+    if ((this.scanner && this.sampleCollector && this.sciencePanel) || this.disposed) {
+      return;
+    }
+    if (!this.scienceSystemPromise) {
+      this.scienceSystemPromise = Promise.all([
+        import('./science/Scanner'),
+        import('./science/SampleCollector'),
+        import('./ui/SciencePanel'),
+      ])
+        .then(([scannerModule, collectorModule, panelModule]) => {
+          if (this.disposed || (this.scanner && this.sampleCollector && this.sciencePanel)) {
+            return;
+          }
+
+          const scanner = new scannerModule.Scanner({
+            planetType: this.currentPlanet,
+            planetRadius: this.planet.config.radius,
+            surfaceMesh: this.planet.mesh,
+          });
+          const sampleCollector = new collectorModule.SampleCollector({
+            planetType: this.currentPlanet,
+            planetRadius: this.planet.config.radius,
+          });
+          const sciencePanel = new panelModule.SciencePanel();
+          sciencePanel.setScannerActive(false);
+          sciencePanel.setCollectionLog(sampleCollector.getInventory());
+
+          this.scanner = scanner;
+          this.sampleCollector = sampleCollector;
+          this.sciencePanel = sciencePanel;
+        })
+        .finally(() => {
+          this.scienceSystemPromise = null;
+        });
+    }
+    await this.scienceSystemPromise;
+  }
+
+  private async ensureAchievementData(): Promise<void> {
+    if (this.hiddenPois.length > 0 || this.disposed) {
+      return;
+    }
+    if (!this.achievementDataPromise) {
+      this.achievementDataPromise = import('./achievement/AchievementData')
+        .then(({ HIDDEN_POIS, PLANET_SAMPLE_TYPES }) => {
+          if (this.disposed) {
+            return;
+          }
+          this.hiddenPois = HIDDEN_POIS.map((poi) => ({ ...poi }));
+          this.planetSampleTypes = { ...PLANET_SAMPLE_TYPES };
+        })
+        .finally(() => {
+          this.achievementDataPromise = null;
+        });
+    }
+    await this.achievementDataPromise;
+  }
+
+  private async ensureAchievementSystem(): Promise<void> {
+    if ((this.achievementManager && this.achievementPanel && this.achievementToast) || this.disposed) {
+      return;
+    }
+    if (!this.achievementSystemPromise) {
+      this.achievementSystemPromise = (async () => {
+        await this.ensureAchievementData();
+        const [managerModule, panelModule, toastModule] = await Promise.all([
+          import('./achievement/AchievementManager'),
+          import('./ui/AchievementPanel'),
+          import('./ui/AchievementToast'),
+        ]);
+        if (this.disposed || (this.achievementManager && this.achievementPanel && this.achievementToast)) {
+          return;
+        }
+        const manager = new managerModule.AchievementManager();
+        const panel = new panelModule.AchievementPanel(manager);
+        const toast = new toastModule.AchievementToast();
+        this.achievementManager = manager;
+        this.achievementPanel = panel;
+        this.achievementToast = toast;
+        if (this.pendingAchievementEvents.length > 0) {
+          for (const event of this.pendingAchievementEvents) {
+            manager.recordEvent(event);
+          }
+          this.pendingAchievementEvents = [];
+        }
+        this.achievementUnsubscribes.push(
+          manager.onUnlock((status) => {
+            this.achievementToast?.show(status);
+          }),
+        );
+      })().finally(() => {
+        this.achievementSystemPromise = null;
+      });
+    }
+    await this.achievementSystemPromise;
+  }
+
+  private recordAchievementEvent(event: AchievementEvent): void {
+    if (this.achievementManager) {
+      this.achievementManager.recordEvent(event);
+      return;
+    }
+    this.pendingAchievementEvents.push(event);
+  }
+
+  private async toggleAchievementPanel(): Promise<void> {
+    await this.ensureAchievementSystem();
+    this.achievementPanel?.toggle();
   }
 
   private onResize = (): void => {
@@ -257,12 +400,12 @@ export class App implements IDisposable {
 
     if (e.code === 'Tab' && !e.repeat) {
       e.preventDefault();
-      this.achievementPanel.toggle();
+      void this.toggleAchievementPanel();
       return;
     }
 
     if (e.code === 'KeyP' && !e.repeat) {
-      this.togglePhotoMode();
+      void this.togglePhotoMode();
       return;
     }
 
@@ -275,11 +418,11 @@ export class App implements IDisposable {
       return;
     }
     if (e.code === 'KeyE' && !e.repeat) {
-      this.toggleScanner();
+      void this.toggleScanner();
       return;
     }
     if (e.code === 'KeyF' && !e.repeat) {
-      this.collectSample();
+      void this.collectSample();
       return;
     }
     if (e.code === 'KeyM' && !e.repeat) {
@@ -288,7 +431,7 @@ export class App implements IDisposable {
       return;
     }
     if (e.key === 'Escape') {
-      if (this.achievementPanel.isOpen) {
+      if (this.achievementPanel?.isOpen) {
         this.achievementPanel.close();
         return;
       }
@@ -310,21 +453,22 @@ export class App implements IDisposable {
   };
 
   private onPhotoFovChange = (fov: number): void => {
-    if (this.photoModeActive) {
+    if (this.photoModeActive && this.photoMode) {
       this.photoMode.setFov(fov);
     }
   };
 
-  private togglePhotoMode(): void {
+  private async togglePhotoMode(): Promise<void> {
     if (this.photoModeActive) {
       this.exitPhotoMode();
       return;
     }
+    await this.ensurePhotoModeSystem();
     this.enterPhotoMode();
   }
 
   private enterPhotoMode(): void {
-    if (this.photoModeActive) {
+    if (this.photoModeActive || !this.photoMode || !this.photoModeUI) {
       return;
     }
 
@@ -356,7 +500,7 @@ export class App implements IDisposable {
   }
 
   private exitPhotoMode(): void {
-    if (!this.photoModeActive) {
+    if (!this.photoModeActive || !this.photoMode || !this.photoModeUI) {
       return;
     }
 
@@ -413,7 +557,7 @@ export class App implements IDisposable {
     link.href = this.engine.renderer.domElement.toDataURL('image/png');
     link.download = `planet-walk-photo-${stamp}.png`;
     link.click();
-    this.achievementManager.recordEvent({
+    this.recordAchievementEvent({
       type: 'photo_taken',
       planet: this.currentPlanet,
     });
@@ -423,7 +567,12 @@ export class App implements IDisposable {
     return String(value).padStart(2, '0');
   }
 
-  private toggleScanner(): void {
+  private async toggleScanner(): Promise<void> {
+    await this.ensureScienceSystem();
+    if (!this.scanner || !this.sciencePanel) {
+      return;
+    }
+
     const next = !this.scanner.isActive;
     this.scanner.setActive(next);
     this.sciencePanel.setScannerActive(next);
@@ -433,7 +582,12 @@ export class App implements IDisposable {
     );
   }
 
-  private collectSample(): void {
+  private async collectSample(): Promise<void> {
+    await this.ensureScienceSystem();
+    if (!this.sampleCollector || !this.sciencePanel) {
+      return;
+    }
+
     if (!this.isInSurfaceMode()) {
       this.sciencePanel.showActionMessage('请先降落到地表后再采集样本。');
       return;
@@ -448,9 +602,13 @@ export class App implements IDisposable {
   }
 
   private updateAchievementState(delta: number): void {
+    if (!this.achievementManager) {
+      return;
+    }
+
     const inSurfaceMode = this.isInSurfaceMode();
     if (inSurfaceMode && !this.wasInSurfaceMode) {
-      this.achievementManager.recordEvent({
+      this.recordAchievementEvent({
         type: 'planet_landed',
         planet: this.currentPlanet,
       });
@@ -460,7 +618,7 @@ export class App implements IDisposable {
     if (inSurfaceMode) {
       const playerPosition = this.playerController.state.position;
       const playerGeo = cartesianToGeo(playerPosition, this.sceneManager.planetRadius);
-      this.achievementManager.recordEvent({
+      this.recordAchievementEvent({
         type: 'altitude_updated',
         altitude: playerGeo.alt,
       });
@@ -468,7 +626,7 @@ export class App implements IDisposable {
       if (this.lastPlayerPosition) {
         const step = playerPosition.distanceTo(this.lastPlayerPosition);
         if (step > 1e-3) {
-          this.achievementManager.recordEvent({
+          this.recordAchievementEvent({
             type: 'distance_walked',
             distance: step,
           });
@@ -482,14 +640,14 @@ export class App implements IDisposable {
       const moving =
         Math.abs(movement.forward) > 1e-3 ||
         Math.abs(movement.right) > 1e-3;
-      this.achievementManager.recordEvent({
+      this.recordAchievementEvent({
         type: 'walk_streak_tick',
         moving,
         delta,
       });
     } else {
       this.lastPlayerPosition = null;
-      this.achievementManager.recordEvent({
+      this.recordAchievementEvent({
         type: 'walk_streak_tick',
         moving: false,
         delta,
@@ -498,12 +656,12 @@ export class App implements IDisposable {
 
     this.wasInSurfaceMode = inSurfaceMode;
 
-    const weather = this.weatherSystem.weather;
+    const weather = this.weatherSystem?.weather;
     if (weather) {
       const weatherTag = `${this.currentPlanet}:${weather}`;
       if (weatherTag !== this.lastWeatherTag) {
         this.lastWeatherTag = weatherTag;
-        this.achievementManager.recordEvent({
+        this.recordAchievementEvent({
           type: 'weather_changed',
           weather,
         });
@@ -526,14 +684,14 @@ export class App implements IDisposable {
         ? `${this.currentPlanet}:landmark:${this.normalizeSiteName(nearest.name)}`
         : `${this.currentPlanet}:grid:${roundedLat}:${roundedLng}`;
 
-    this.achievementManager.recordEvent({
+    this.recordAchievementEvent({
       type: 'site_scanned',
       siteId,
     });
 
     const hiddenPoiId = this.findNearbyHiddenPoi(playerGeo.lat, playerGeo.lng);
     if (hiddenPoiId) {
-      this.achievementManager.recordEvent({
+      this.recordAchievementEvent({
         type: 'hidden_poi_found',
         poiId: hiddenPoiId,
       });
@@ -544,8 +702,11 @@ export class App implements IDisposable {
     if (!this.isInSurfaceMode()) {
       return;
     }
-    const sampleType = PLANET_SAMPLE_TYPES[this.currentPlanet];
-    this.achievementManager.recordEvent({
+    const sampleType = this.planetSampleTypes[this.currentPlanet];
+    if (!sampleType) {
+      return;
+    }
+    this.recordAchievementEvent({
       type: 'sample_collected',
       sampleType,
     });
@@ -558,7 +719,7 @@ export class App implements IDisposable {
   private findNearbyHiddenPoi(lat: number, lng: number): string | null {
     const maxLatOffset = 3;
     const maxLngOffset = 3;
-    for (const poi of HIDDEN_POIS) {
+    for (const poi of this.hiddenPois) {
       if (poi.planet !== this.currentPlanet) {
         continue;
       }
@@ -680,6 +841,7 @@ export class App implements IDisposable {
     const nextPlanet = PlanetFactory.create(planetType);
     this.sceneManager.replacePlanet(nextPlanet);
     this.planet = nextPlanet;
+    this.scheduleDeferredPlanetTextures();
 
     this.playerController.switchPlanet({
       planetId: planetType,
@@ -694,7 +856,7 @@ export class App implements IDisposable {
     this.minimap.setBackgroundColor(nextPlanet.config.textures.fallbackColor);
 
     // 切换天气系统
-    this.weatherSystem.switchPlanet(
+    this.weatherSystem?.switchPlanet(
       this.sceneManager.scene,
       nextPlanet.config.radius,
       nextPlanet.config.weather,
@@ -706,13 +868,13 @@ export class App implements IDisposable {
 
     // 切换环境音
     this.audioManager.setPlanet(planetType);
-    this.scanner.switchPlanet({
+    this.scanner?.switchPlanet({
       planetType,
       planetRadius: nextPlanet.config.radius,
       surfaceMesh: nextPlanet.mesh,
     });
-    this.sampleCollector.switchPlanet(planetType, nextPlanet.config.radius);
-    this.sciencePanel.updateNearbyTarget(null);
+    this.sampleCollector?.switchPlanet(planetType, nextPlanet.config.radius);
+    this.sciencePanel?.updateNearbyTarget(null);
 
     this.currentPlanet = planetType;
     this.planetSelector.setActive(planetType);
@@ -735,6 +897,10 @@ export class App implements IDisposable {
     this.cameraManager.switchTo('orbit');
     this.guidePanel.showOrbitGuide();
     this.landButton.show();
+    this.scheduleDeferredPlanetTextures();
+
+    void this.ensureWeatherSystem();
+    void this.ensureAchievementSystem();
 
     // 初始化音效（需要用户交互后）
     const initAudio = (): void => {
@@ -752,7 +918,7 @@ export class App implements IDisposable {
       const delta = this.clock.getDelta();
 
       if (this.photoModeActive) {
-        this.photoMode.update(delta);
+        this.photoMode?.update(delta);
         this.filterManager.update(delta);
         this.filterManager.render(delta);
         return;
@@ -783,14 +949,14 @@ export class App implements IDisposable {
         );
       }
 
-      if (this.scanner.isActive) {
-        this.sciencePanel.updateScanData(this.scanner.scan(this.cameraSystem.camera));
+      if (this.scanner?.isActive) {
+        this.sciencePanel?.updateScanData(this.scanner.scan(this.cameraSystem.camera));
         this.scanCurrentLocation();
       }
       const nearbyTarget = inSurfaceMode
-        ? this.sampleCollector.getNearbyTarget(this.playerController.state.position)
+        ? this.sampleCollector?.getNearbyTarget(this.playerController.state.position) ?? null
         : null;
-      this.sciencePanel.updateNearbyTarget(nearbyTarget);
+      this.sciencePanel?.updateNearbyTarget(nearbyTarget);
 
       // 更新星球特效（云层/夜景/海洋）
       this.planet.update(delta);
@@ -802,7 +968,7 @@ export class App implements IDisposable {
       this.landmarkManager.update(cameraPosition);
 
       // 更新天气系统
-      this.weatherSystem.update(delta, cameraPosition);
+      this.weatherSystem?.update(delta, cameraPosition);
 
       const geo = cartesianToGeo(cameraPosition, this.sceneManager.planetRadius);
       const playerGeo = cartesianToGeo(
@@ -833,13 +999,14 @@ export class App implements IDisposable {
   }
 
   dispose(): void {
+    this.disposed = true;
     cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKeyDown);
     if (this.photoModeActive) {
       this.exitPhotoMode();
     }
-    this.photoModeUI.dispose();
+    this.photoModeUI?.dispose();
     this.filterManager.dispose();
     this.cameraManager.dispose();
     this.playerController.dispose();
@@ -854,16 +1021,16 @@ export class App implements IDisposable {
     this.guidePanel.dispose();
     this.landButton.dispose();
     this.minimap.dispose();
-    this.sciencePanel.dispose();
-    this.weatherSystem.dispose();
+    this.sciencePanel?.dispose();
+    this.weatherSystem?.dispose();
     for (const unsubscribe of this.achievementUnsubscribes) {
       unsubscribe();
     }
     this.achievementUnsubscribes = [];
-    this.achievementPanel.dispose();
-    this.achievementToast.dispose();
+    this.achievementPanel?.dispose();
+    this.achievementToast?.dispose();
     this.helpOverlay.dispose();
-    this.achievementManager.dispose();
+    this.achievementManager?.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
   }

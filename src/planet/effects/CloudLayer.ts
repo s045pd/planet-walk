@@ -6,11 +6,21 @@ import type { IDisposable } from '../../core/types';
  */
 export class CloudLayer implements IDisposable {
   readonly mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshPhongMaterial>;
+  private readonly textureLoader = new THREE.TextureLoader();
+  private readonly cloudsPath?: string;
   private rotationSpeed = 0.002;
+  private textureLoaded = false;
+  private disposed = false;
 
-  constructor(planetRadius: number, segments: number, cloudsPath?: string) {
+  constructor(
+    planetRadius: number,
+    segments: number,
+    cloudsPath?: string,
+    autoLoad = true,
+  ) {
     const radius = planetRadius * 1.005;
     const geometry = new THREE.SphereGeometry(radius, segments, segments);
+    this.cloudsPath = cloudsPath;
 
     const material = new THREE.MeshPhongMaterial({
       transparent: true,
@@ -19,30 +29,69 @@ export class CloudLayer implements IDisposable {
       side: THREE.FrontSide,
     });
 
-    if (cloudsPath) {
-      const loader = new THREE.TextureLoader();
-      loader.load(cloudsPath, (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = 8;
-        material.map = tex;
-        material.alphaMap = tex;
-        material.needsUpdate = true;
-      }, undefined, () => { /* 静默跳过 */ });
-    }
-
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'earth-clouds';
+
+    if (autoLoad) {
+      void this.loadTexture();
+    }
   }
 
   update(delta: number): void {
     this.mesh.rotation.y += this.rotationSpeed * delta;
   }
 
+  loadTexture(): Promise<void> {
+    if (this.textureLoaded || !this.cloudsPath || this.disposed) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      this.textureLoader.load(
+        this.cloudsPath!,
+        (tex) => {
+          if (this.disposed) {
+            tex.dispose();
+            resolve();
+            return;
+          }
+
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.anisotropy = 8;
+          const material = this.mesh.material;
+          const oldMap = material.map;
+          const oldAlpha = material.alphaMap;
+          material.map = tex;
+          material.alphaMap = tex;
+          material.needsUpdate = true;
+
+          if (oldMap && oldMap !== tex) {
+            oldMap.dispose();
+          }
+          if (oldAlpha && oldAlpha !== tex && oldAlpha !== oldMap) {
+            oldAlpha.dispose();
+          }
+          this.textureLoaded = true;
+          resolve();
+        },
+        undefined,
+        () => {
+          resolve();
+        },
+      );
+    });
+  }
+
   dispose(): void {
+    this.disposed = true;
     this.mesh.geometry.dispose();
     const mat = this.mesh.material;
-    mat.map?.dispose();
-    mat.alphaMap?.dispose();
+    const map = mat.map;
+    const alphaMap = mat.alphaMap;
+    map?.dispose();
+    if (alphaMap && alphaMap !== map) {
+      alphaMap.dispose();
+    }
     mat.dispose();
   }
 }

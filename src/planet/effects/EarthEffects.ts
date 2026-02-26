@@ -7,6 +7,7 @@ import { OceanEffect } from './OceanEffect';
 export interface EarthEffectsConfig {
   cloudsPath?: string;
   nightPath?: string;
+  deferTextureLoad?: boolean;
 }
 
 /**
@@ -17,13 +18,15 @@ export class EarthEffects implements IDisposable {
   private clouds: CloudLayer;
   private nightLights: NightLights;
   private ocean: OceanEffect;
+  private deferredTexturesLoaded = false;
 
   constructor(planetRadius: number, segments: number, config?: EarthEffectsConfig) {
     this.root = new THREE.Group();
     this.root.name = 'earth-effects';
 
-    this.clouds = new CloudLayer(planetRadius, segments, config?.cloudsPath);
-    this.nightLights = new NightLights(planetRadius, segments, config?.nightPath);
+    const autoLoad = !config?.deferTextureLoad;
+    this.clouds = new CloudLayer(planetRadius, segments, config?.cloudsPath, autoLoad);
+    this.nightLights = new NightLights(planetRadius, segments, config?.nightPath, autoLoad);
     this.ocean = new OceanEffect(planetRadius, segments);
 
     this.root.add(this.clouds.mesh);
@@ -35,6 +38,17 @@ export class EarthEffects implements IDisposable {
     this.clouds.update(delta);
     this.nightLights.setSunDirection(sunDirection);
     this.ocean.setSunDirection(sunDirection);
+  }
+
+  loadDeferredTextures(): Promise<void> {
+    if (this.deferredTexturesLoaded) {
+      return Promise.resolve();
+    }
+    this.deferredTexturesLoaded = true;
+    return Promise.all([
+      this.clouds.loadTexture(),
+      this.nightLights.loadTexture(),
+    ]).then(() => {});
   }
 
   dispose(): void {
