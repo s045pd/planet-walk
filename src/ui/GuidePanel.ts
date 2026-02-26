@@ -14,7 +14,8 @@ export class GuidePanel implements IDisposable {
     this.root.style.cssText = `
       position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
       padding: 16px 24px; background: rgba(0,0,0,0.75); color: #fff;
-      border-radius: 12px; font-family: system-ui, sans-serif; font-size: 14px;
+      border-radius: 12px; font-family: system-ui, sans-serif; font-size: clamp(12px, 3.4vw, 14px);
+      width: min(560px, calc(100vw - 24px)); max-height: 80vh; overflow-y: auto;
       text-align: center; pointer-events: none; z-index: 50;
       backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.15);
       transition: opacity 0.5s; line-height: 1.8;

@@ -16,7 +16,8 @@ export class LandButton implements IDisposable {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
       padding: 12px 32px; background: linear-gradient(135deg, #1a6bff, #0044cc);
       color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 24px;
-      font-size: 16px; font-family: system-ui, sans-serif; font-weight: 600;
+      font-size: clamp(13px, 3.6vw, 16px); font-family: system-ui, sans-serif; font-weight: 600;
+      min-height: 44px; max-width: min(360px, calc(100vw - 24px)); width: max-content;
       cursor: pointer; z-index: 50; letter-spacing: 1px;
       backdrop-filter: blur(6px); transition: all 0.2s;
       box-shadow: 0 4px 20px rgba(26,107,255,0.4);

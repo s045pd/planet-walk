@@ -12,6 +12,9 @@ export class AchievementToast implements IDisposable {
     this.container.style.display = 'flex';
     this.container.style.flexDirection = 'column';
     this.container.style.gap = '8px';
+    this.container.style.maxWidth = 'min(360px, calc(100vw - 24px))';
+    this.container.style.maxHeight = '80vh';
+    this.container.style.overflowY = 'auto';
     this.container.style.pointerEvents = 'none';
     this.container.style.zIndex = '120';
     document.body.appendChild(this.container);
@@ -19,8 +22,8 @@ export class AchievementToast implements IDisposable {
 
   show(status: AchievementStatus): void {
     const toast = document.createElement('div');
-    toast.style.minWidth = '280px';
-    toast.style.maxWidth = '360px';
+    toast.style.minWidth = 'min(280px, calc(100vw - 24px))';
+    toast.style.maxWidth = 'min(360px, calc(100vw - 24px))';
     toast.style.padding = '12px 14px';
     toast.style.borderRadius = '10px';
     toast.style.border = '1px solid rgba(148, 206, 255, 0.6)';
@@ -34,13 +37,13 @@ export class AchievementToast implements IDisposable {
 
     const title = document.createElement('div');
     title.textContent = `成就解锁: ${status.definition.name}`;
-    title.style.fontSize = '14px';
+    title.style.fontSize = 'clamp(13px, 3.4vw, 14px)';
     title.style.fontWeight = '700';
     title.style.marginBottom = '4px';
 
     const desc = document.createElement('div');
     desc.textContent = status.definition.description;
-    desc.style.fontSize = '12px';
+    desc.style.fontSize = 'clamp(11px, 3vw, 12px)';
     desc.style.opacity = '0.9';
 
     toast.append(title, desc);
