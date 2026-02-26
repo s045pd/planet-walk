@@ -38,6 +38,7 @@ import type { AchievementPanel } from './ui/AchievementPanel';
 import type { AchievementToast } from './ui/AchievementToast';
 import { DayNightCycle } from './environment/DayNightCycle';
 import { HelpOverlay } from './ui/HelpOverlay';
+import { SettingsPanel } from './ui/SettingsPanel';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -72,6 +73,7 @@ export class App implements IDisposable {
   private achievementPanel: AchievementPanel | null = null;
   private achievementToast: AchievementToast | null = null;
   private helpOverlay: HelpOverlay;
+  private settingsPanel: SettingsPanel;
   private achievementUnsubscribes: Array<() => void> = [];
   private hiddenPois: HiddenPoi[] = [];
   private planetSampleTypes: Partial<Record<PlanetType, SampleType>> = {};
@@ -190,6 +192,13 @@ export class App implements IDisposable {
     );
 
     this.helpOverlay = new HelpOverlay();
+    this.settingsPanel = new SettingsPanel({
+      audioManager: this.audioManager,
+      renderer: this.engine.renderer,
+      onPixelRatioChange: (pixelRatio) => {
+        this.filterManager.resize(window.innerWidth, window.innerHeight, pixelRatio);
+      },
+    });
 
     this.dayNightCycle = new DayNightCycle({
       planetRadius: planet.config.radius,
@@ -392,7 +401,7 @@ export class App implements IDisposable {
     this.filterManager.resize(
       window.innerWidth,
       window.innerHeight,
-      Math.min(window.devicePixelRatio, 2),
+      this.settingsPanel.getPixelRatio(),
     );
   };
 
@@ -407,6 +416,14 @@ export class App implements IDisposable {
       if (e.key === 'Escape') {
         this.audioManager.playUIClick();
         this.helpOverlay.close();
+      }
+      return;
+    }
+
+    if (this.settingsPanel.isOpen) {
+      if (e.key === 'Escape') {
+        this.audioManager.playUIClick();
+        this.settingsPanel.close();
       }
       return;
     }
@@ -1053,6 +1070,7 @@ export class App implements IDisposable {
     this.achievementPanel?.dispose();
     this.achievementToast?.dispose();
     this.helpOverlay.dispose();
+    this.settingsPanel.dispose();
     this.achievementManager?.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
