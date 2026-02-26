@@ -56,6 +56,8 @@ export const PLANET_SAMPLE_TYPES: Record<PlanetType, SampleType> = {
   earth: 'sediment',
   mars: 'oxide',
   moon: 'regolith',
+  venus: 'oxide',
+  europa: 'regolith',
 };
 
 export const HIDDEN_POIS: HiddenPoi[] = [
@@ -90,12 +92,28 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
     condition: { type: 'land_planets', targets: ['moon'] },
   },
   {
+    id: 'land_venus',
+    name: '金云穿行者',
+    description: '首次在金星着陆',
+    icon: 'planet',
+    category: 'exploration',
+    condition: { type: 'land_planets', targets: ['venus'] },
+  },
+  {
+    id: 'land_europa',
+    name: '冰壳首踏',
+    description: '首次在欧罗巴着陆',
+    icon: 'planet',
+    category: 'exploration',
+    condition: { type: 'land_planets', targets: ['europa'] },
+  },
+  {
     id: 'land-all-planets',
-    name: '三界旅者',
-    description: '在每个星球都完成首次着陆',
+    name: '五界旅者',
+    description: '在全部五个星球都完成首次着陆',
     icon: 'orbit',
     category: 'exploration',
-    condition: { type: 'land_planets', targets: ['earth', 'mars', 'moon'] },
+    condition: { type: 'land_planets', targets: ['earth', 'mars', 'moon', 'venus', 'europa'] },
   },
   {
     id: 'walk-1km',
@@ -180,10 +198,10 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   {
     id: 'photo-all-planets',
     name: '行星摄影师',
-    description: '在每个星球都拍一张照片',
+    description: '在全部五个星球都拍一张照片',
     icon: 'camera',
     category: 'challenge',
-    condition: { type: 'photo_planets', targets: ['earth', 'mars', 'moon'] },
+    condition: { type: 'photo_planets', targets: ['earth', 'mars', 'moon', 'venus', 'europa'] },
   },
   {
     id: 'weather-master',

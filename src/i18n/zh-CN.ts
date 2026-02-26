@@ -6,6 +6,8 @@ export const zhCN = {
   'planet.earth': '地球',
   'planet.mars': '火星',
   'planet.moon': '月球',
+  'planet.venus': '金星',
+  'planet.europa': '欧罗巴',
 
   'hud.planet': '星球: {planet}',
   'hud.geo': '纬度: {lat}°, 经度: {lng}°, 海拔: {alt} m',

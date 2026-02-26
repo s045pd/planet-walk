@@ -29,9 +29,11 @@ export class AmbientSound {
 
     switch (planetName) {
       case 'mars':
+      case 'venus':
         this.startMarsAmbience();
         break;
       case 'moon':
+      case 'europa':
         this.startMoonAmbience();
         break;
       case 'earth':
@@ -46,7 +48,7 @@ export class AmbientSound {
     this.gainNode.gain.cancelScheduledValues(now);
     this.gainNode.gain.setValueAtTime(current, now);
     this.gainNode.gain.exponentialRampToValueAtTime(
-      planetName === 'moon' ? 0.018 : 0.09,
+      planetName === 'moon' || planetName === 'europa' ? 0.018 : 0.09,
       now + 0.8,
     );
   }

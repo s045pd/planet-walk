@@ -144,6 +144,82 @@ const SCIENCE_DATA: Record<PlanetType, PlanetScienceData> = {
       { label: '细粒月壤层', maxSlope: 18 },
     ],
   },
+  venus: {
+    samples: {
+      venus_basalt: {
+        id: 'venus_basalt',
+        name: '玄武岩样本',
+        description: '高温风化后的火山岩，可用于分析金星近期火山活动。',
+      },
+      venus_aerosol: {
+        id: 'venus_aerosol',
+        name: '气溶胶沉降物',
+        description: '富含硫化成分的沉降颗粒，反映厚大气化学循环。',
+      },
+    },
+    pois: [
+      {
+        id: 'venus-maxwell-site',
+        name: '麦克斯韦山脉采样点',
+        lat: 65.2,
+        lng: 3.3,
+        sampleId: 'venus_basalt',
+        radiusScale: 0.03,
+      },
+      {
+        id: 'venus-maat-site',
+        name: '玛特火山沉降采样点',
+        lat: 0.5,
+        lng: 194.6,
+        sampleId: 'venus_aerosol',
+        radiusScale: 0.03,
+      },
+    ],
+    geologyRules: [
+      { label: '火山熔岩高地', minAltitude: 2.5, minSlope: 16 },
+      { label: '硫化沉积平原', maxAltitude: 0.5, maxSlope: 10 },
+      { label: '风化玄武岩层', minSlope: 10 },
+      { label: '压实熔岩原', maxSlope: 14 },
+    ],
+  },
+  europa: {
+    samples: {
+      europa_ice: {
+        id: 'europa_ice',
+        name: '冰壳样本',
+        description: '高反照率水冰，可用于分析表层冰晶结构。',
+      },
+      europa_brine: {
+        id: 'europa_brine',
+        name: '盐化冰样',
+        description: '含盐裂隙冰，可能记录地下海洋物质交换痕迹。',
+      },
+    },
+    pois: [
+      {
+        id: 'europa-pwyll-site',
+        name: '普维尔撞击区采样点',
+        lat: -25.0,
+        lng: 271.0,
+        sampleId: 'europa_ice',
+        radiusScale: 0.05,
+      },
+      {
+        id: 'europa-conamara-site',
+        name: '科纳马拉混沌区采样点',
+        lat: 9.7,
+        lng: 274.0,
+        sampleId: 'europa_brine',
+        radiusScale: 0.05,
+      },
+    ],
+    geologyRules: [
+      { label: '张裂冰脊', minSlope: 20 },
+      { label: '混沌冰块区', minAltitude: 1.2, maxSlope: 18 },
+      { label: '再冻结平原', maxAltitude: -0.6, maxSlope: 12 },
+      { label: '冰壳碎屑层', maxSlope: 20 },
+    ],
+  },
 };
 
 export function getPlanetScienceData(planet: PlanetType): PlanetScienceData {

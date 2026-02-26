@@ -8,6 +8,8 @@ export const jaJP: Record<TranslationKey, string> = {
   'planet.earth': '地球',
   'planet.mars': '火星',
   'planet.moon': '月',
+  'planet.venus': '金星',
+  'planet.europa': 'エウロパ',
 
   'hud.planet': '惑星: {planet}',
   'hud.geo': '緯度: {lat}°, 経度: {lng}°, 高度: {alt} m',

@@ -8,6 +8,8 @@ export const enUS: Record<TranslationKey, string> = {
   'planet.earth': 'Earth',
   'planet.mars': 'Mars',
   'planet.moon': 'Moon',
+  'planet.venus': 'Venus',
+  'planet.europa': 'Europa',
 
   'hud.planet': 'Planet: {planet}',
   'hud.geo': 'Lat: {lat}°, Lng: {lng}°, Alt: {alt} m',
