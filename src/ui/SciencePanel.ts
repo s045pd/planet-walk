@@ -16,7 +16,7 @@ export class SciencePanel implements IDisposable {
   constructor() {
     this.root = document.createElement('div');
     this.root.style.cssText = `
-      position: fixed; right: 16px; top: 16px; z-index: 60;
+      position: fixed; right: 16px; top: 72px; z-index: 60;
       display: flex; flex-direction: column; gap: 10px; pointer-events: none;
       width: min(360px, calc(100vw - 24px));
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -86,6 +86,8 @@ export class SciencePanel implements IDisposable {
     this.scanCard.style.borderColor = active
       ? 'rgba(101, 198, 255, 0.55)'
       : 'rgba(101, 198, 255, 0.35)';
+    this.logCard.style.display = active ? 'flex' : 'none';
+    this.collectHint.style.display = active ? 'block' : 'none';
     if (!active) {
       this.scanBody.textContent = '按 E 激活扫描仪并对准地面。';
     }

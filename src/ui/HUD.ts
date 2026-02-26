@@ -50,8 +50,9 @@ export class HUD implements IDisposable {
 
   update(data: HUDData): void {
     this.planetLine.textContent = `Planet: ${data.planetName.toUpperCase()}`;
+    const displayAlt = Math.max(0, data.alt);
     this.geoLine.textContent =
-      `Lat: ${data.lat.toFixed(2)}°, Lng: ${data.lng.toFixed(2)}°, Alt: ${data.alt.toFixed(1)} m`;
+      `Lat: ${data.lat.toFixed(2)}°, Lng: ${data.lng.toFixed(2)}°, Alt: ${displayAlt.toFixed(1)} m`;
     this.timeLine.textContent =
       `Local Time: ${data.localTime} (${data.timeScaleLabel})`;
     this.worldLine.textContent =

@@ -11,6 +11,20 @@ const CATEGORY_LABELS: Record<AchievementCategory, string> = {
   challenge: '挑战成就',
 };
 
+const ICON_EMOJI: Record<string, string> = {
+  planet: '🪐',
+  orbit: '🌍',
+  boots: '🥾',
+  summit: '⛰️',
+  depth: '⬇️',
+  scan: '🔬',
+  sample: '🧪',
+  secret: '🗝️',
+  streak: '🏃',
+  camera: '📷',
+  weather: '🌦️',
+};
+
 export class AchievementPanel implements IDisposable {
   private readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
@@ -191,15 +205,14 @@ export class AchievementPanel implements IDisposable {
     left.style.gap = '8px';
 
     const icon = document.createElement('div');
-    icon.textContent = status.definition.icon.toUpperCase().slice(0, 2);
+    icon.textContent = ICON_EMOJI[status.definition.icon] ?? '🏆';
     icon.style.width = '28px';
     icon.style.height = '28px';
     icon.style.borderRadius = '50%';
     icon.style.display = 'flex';
     icon.style.alignItems = 'center';
     icon.style.justifyContent = 'center';
-    icon.style.fontSize = '10px';
-    icon.style.fontWeight = '700';
+    icon.style.fontSize = '16px';
     icon.style.background = 'rgba(138, 188, 255, 0.18)';
     icon.style.border = '1px solid rgba(138, 188, 255, 0.45)';
 

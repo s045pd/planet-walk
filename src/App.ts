@@ -589,15 +589,15 @@ export class App implements IDisposable {
     return (heading + 360) % 360;
   }
 
-  /** 降落到地表 */
+  /** 降落到地表 — 使用相机当前朝向的地表坐标 */
   private landOnSurface(): void {
     this.landButton.hide();
     this.guidePanel.fadeOut();
-    // 使用第一个地标的坐标，或默认位置
-    const landmarks = this.planet.config.landmarks;
-    const lat = landmarks.length > 0 ? landmarks[0].lat : 0;
-    const lng = landmarks.length > 0 ? landmarks[0].lng : 0;
-    this.cameraManager.animateToSurface(lat, lng, 2500).then(() => {
+    const geo = cartesianToGeo(
+      this.cameraSystem.camera.position,
+      this.sceneManager.planetRadius,
+    );
+    this.cameraManager.animateToSurface(geo.lat, geo.lng, 2500).then(() => {
       this.guidePanel.showFirstPersonGuide();
     });
   }
