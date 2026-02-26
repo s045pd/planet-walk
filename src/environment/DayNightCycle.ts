@@ -32,7 +32,7 @@ export class DayNightCycle {
   private readonly starsUniforms: Record<string, THREE.IUniform<unknown>>;
 
   private readonly sunDirection = new THREE.Vector3(1, 0, 0);
-  private readonly observerUp = new THREE.Vector3(1, 0, 0);
+  private readonly observerUp = new THREE.Vector3(0, 0, 1);
   private readonly orbitAxis = new THREE.Vector3(0, 0, 1);
 
   private readonly dayTopColor = new THREE.Color(0x67b4ff);
@@ -75,10 +75,11 @@ export class DayNightCycle {
     this.axialTiltRad = THREE.MathUtils.degToRad(23.5);
     const baseDayDurationSeconds = options.baseDayDurationSeconds ?? 600;
     this.simHoursPerSecond = HOURS_PER_DAY / Math.max(baseDayDurationSeconds, 1);
-    this.utcTimeHours = this.normalizeHours(options.initialTimeHours ?? 15.5);
+    // Align default local noon with the startup orbit camera (camera starts on +Z).
+    this.utcTimeHours = this.normalizeHours(options.initialTimeHours ?? 18.0);
 
     this.updateSunDirection();
-    this.applyEnvironment(new THREE.Vector3(1, 0, 0));
+    this.applyEnvironment(new THREE.Vector3(0, 0, 1));
     this.onSunDirectionChange(this.sunDirection);
   }
 
@@ -187,7 +188,7 @@ export class DayNightCycle {
     const visibilityUniform = this.starsUniforms.visibility;
     if (!visibilityUniform) return;
 
-    const visibility = THREE.MathUtils.clamp(1 - daylight * 0.95 + twilight * 0.15, 0.08, 1.0);
+    const visibility = THREE.MathUtils.clamp(1.15 - daylight * 0.98 + twilight * 0.22, 0.12, 1.25);
     visibilityUniform.value = visibility;
   }
 
