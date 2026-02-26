@@ -903,9 +903,11 @@ export class App implements IDisposable {
         this.particleSystem = new MeteorEffect(radius);
         break;
       case 'mars':
+      case 'venus':
         this.particleSystem = new DustStorm(radius);
         break;
       case 'moon':
+      case 'europa':
         this.particleSystem = new MicroImpact(radius);
         break;
     }

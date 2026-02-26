@@ -2,7 +2,7 @@ import { EARTH_GRAVITY, EARTH_RADIUS, MARS_GRAVITY, MARS_RADIUS, MOON_GRAVITY, M
 import { Planet } from './Planet';
 import type { PlanetConfig } from './PlanetConfig';
 
-export type PlanetType = 'earth' | 'mars' | 'moon';
+export type PlanetType = 'earth' | 'mars' | 'moon' | 'venus' | 'europa';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -103,6 +103,54 @@ const PLANET_CONFIGS: Record<PlanetType, PlanetConfig> = {
       defaultWeather: 'extreme_light',
     },
   },
+  venus: {
+    name: 'venus',
+    radius: 950,
+    gravity: 8.87,
+    segments: 128,
+    textures: {
+      fallbackColor: 0xd4a050,
+    },
+    atmosphere: {
+      enabled: true,
+      color: 0xffa54a,
+      thickness: 0.06,
+      opacity: 0.6,
+    },
+    terrain: {
+      heightScale: 0,
+      maxLodLevel: 10,
+      tileResolution: 256,
+    },
+    landmarks: [
+      { name: 'Maxwell Montes', lat: 65.2, lng: 3.3, description: 'Highest mountain region on Venus' },
+      { name: 'Maat Mons', lat: 0.5, lng: 194.6, description: 'Large shield volcano' },
+    ],
+  },
+  europa: {
+    name: 'europa',
+    radius: 245,
+    gravity: 1.315,
+    segments: 128,
+    textures: {
+      fallbackColor: 0xc8dce8,
+    },
+    atmosphere: {
+      enabled: true,
+      color: 0x7fb7ff,
+      thickness: 0.01,
+      opacity: 0.15,
+    },
+    terrain: {
+      heightScale: 4,
+      maxLodLevel: 10,
+      tileResolution: 256,
+    },
+    landmarks: [
+      { name: 'Pwyll Crater', lat: -25.0, lng: 271.0, description: 'Bright-ray impact crater' },
+      { name: 'Conamara Chaos', lat: 9.7, lng: 274.0, description: 'Disrupted ice terrain region' },
+    ],
+  },
 };
 
 /** 星球工厂：根据预设配置创建星球实例 */
@@ -129,5 +177,13 @@ export class PlanetFactory {
 
   static createMoon(): Planet {
     return this.create('moon');
+  }
+
+  static createVenus(): Planet {
+    return this.create('venus');
+  }
+
+  static createEuropa(): Planet {
+    return this.create('europa');
   }
 }

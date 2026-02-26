@@ -7,7 +7,7 @@ export interface PlanetSelectorConfig {
   onPlanetSelect: (planet: PlanetType) => void;
 }
 
-/** 星球切换面板：地球 / 火星 / 月球 */
+/** 星球切换面板：地球 / 火星 / 月球 / 金星 / 欧罗巴 */
 export class PlanetSelector implements IDisposable {
   private readonly root: HTMLDivElement;
   private readonly buttons: Record<PlanetType, HTMLButtonElement>;
@@ -25,11 +25,11 @@ export class PlanetSelector implements IDisposable {
     this.root.style.top = '16px';
     this.root.style.right = '16px';
     this.root.style.display = 'flex';
-    this.root.style.flexWrap = 'wrap';
+    this.root.style.flexWrap = 'nowrap';
     this.root.style.justifyContent = 'flex-end';
     this.root.style.gap = '8px';
     this.root.style.padding = '10px';
-    this.root.style.maxWidth = 'min(360px, calc(100vw - 32px))';
+    this.root.style.maxWidth = 'min(560px, calc(100vw - 32px))';
     this.root.style.maxHeight = '80vh';
     this.root.style.overflowY = 'auto';
     this.root.style.background = 'rgba(6, 12, 22, 0.65)';
@@ -43,9 +43,17 @@ export class PlanetSelector implements IDisposable {
       earth: this.createButton('planet.earth', 'earth'),
       mars: this.createButton('planet.mars', 'mars'),
       moon: this.createButton('planet.moon', 'moon'),
+      venus: this.createButton('planet.venus', 'venus'),
+      europa: this.createButton('planet.europa', 'europa'),
     };
 
-    this.root.append(this.buttons.earth, this.buttons.mars, this.buttons.moon);
+    this.root.append(
+      this.buttons.earth,
+      this.buttons.mars,
+      this.buttons.moon,
+      this.buttons.venus,
+      this.buttons.europa,
+    );
     document.body.appendChild(this.root);
     this.unsubscribeLocaleChange = onLocaleChange(() => {
       this.refreshLabels();
@@ -135,6 +143,7 @@ export class PlanetSelector implements IDisposable {
       this.root.style.top = '12px';
       this.root.style.right = '12px';
       this.root.style.left = '12px';
+      this.root.style.flexWrap = 'wrap';
       this.root.style.maxWidth = 'none';
       this.root.style.width = 'calc(100vw - 24px)';
       this.root.style.padding = '8px';
@@ -146,8 +155,9 @@ export class PlanetSelector implements IDisposable {
     this.root.style.top = '16px';
     this.root.style.right = '16px';
     this.root.style.left = 'auto';
+    this.root.style.flexWrap = 'nowrap';
     this.root.style.width = 'auto';
-    this.root.style.maxWidth = 'min(360px, calc(100vw - 32px))';
+    this.root.style.maxWidth = 'min(560px, calc(100vw - 32px))';
     this.root.style.padding = '10px';
     this.root.style.gap = '8px';
     this.root.style.justifyContent = 'flex-end';

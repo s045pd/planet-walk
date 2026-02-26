@@ -195,6 +195,8 @@ export class Planet implements IDisposable {
       case 'earth': return ProceduralTexture.earth();
       case 'mars': return ProceduralTexture.mars();
       case 'moon': return ProceduralTexture.moon();
+      case 'venus': return ProceduralTexture.venus();
+      case 'europa': return ProceduralTexture.europa();
       default: return null;
     }
   }

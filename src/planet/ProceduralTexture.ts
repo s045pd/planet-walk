@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /**
  * 程序化星球纹理生成器
- * 用Simplex噪声生成地球/火星/月球的占位纹理
+ * 用噪声生成地球/火星/月球/金星/欧罗巴的占位纹理
  */
 export class ProceduralTexture {
   private static readonly SIZE = 512;
@@ -101,6 +101,77 @@ export class ProceduralTexture {
         const c = Math.min(255, v) | 0;
 
         ctx.fillStyle = `rgb(${c},${c},${(c * 0.95) | 0})`;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  }
+
+  /** 生成金星纹理：橙黄色云带涡旋 */
+  static venus(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = this.SIZE;
+    canvas.height = this.SIZE / 2;
+    const ctx = canvas.getContext('2d')!;
+
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const nx = x / canvas.width;
+        const ny = y / canvas.height;
+        const swirl = Math.sin((ny * 14 + this.fbm(nx * 8, ny * 8, 3) * 5) * Math.PI);
+        const cloud = this.fbm(nx * 7 + swirl * 0.7, ny * 7, 4);
+        const warm = this.fbm(nx * 18, ny * 18, 2);
+        const v = Math.min(1, Math.max(0, cloud * 0.75 + warm * 0.35));
+
+        const r = 190 + v * 65 + swirl * 8;
+        const g = 120 + v * 90;
+        const b = 48 + v * 52;
+
+        ctx.fillStyle = `rgb(${Math.min(255, Math.max(0, r)) | 0},${Math.min(255, Math.max(0, g)) | 0},${Math.min(255, Math.max(0, b)) | 0})`;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  }
+
+  /** 生成欧罗巴纹理：冰蓝底色+暗色裂纹 */
+  static europa(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = this.SIZE;
+    canvas.height = this.SIZE / 2;
+    const ctx = canvas.getContext('2d')!;
+
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const nx = x / canvas.width;
+        const ny = y / canvas.height;
+        const ice = this.fbm(nx * 5, ny * 5, 4);
+        const grain = this.fbm(nx * 20, ny * 20, 2);
+        const ridge = Math.abs(
+          Math.sin((nx * 22 + this.fbm(nx * 6, ny * 6, 2) * 3) * Math.PI) *
+          Math.cos((ny * 16 + this.fbm(nx * 9, ny * 9, 2) * 2) * Math.PI),
+        );
+        const crack = ridge > 0.93 || Math.abs(Math.sin((nx + ny * 0.75) * 42)) > 0.992;
+
+        let r = 176 + ice * 45 + grain * 12;
+        let g = 202 + ice * 40 + grain * 10;
+        let b = 222 + ice * 28 + grain * 8;
+
+        if (crack) {
+          r = 96 + grain * 10;
+          g = 120 + grain * 12;
+          b = 138 + grain * 14;
+        }
+
+        ctx.fillStyle = `rgb(${Math.min(255, Math.max(0, r)) | 0},${Math.min(255, Math.max(0, g)) | 0},${Math.min(255, Math.max(0, b)) | 0})`;
         ctx.fillRect(x, y, 1, 1);
       }
     }

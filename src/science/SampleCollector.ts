@@ -161,7 +161,13 @@ export class SampleCollector {
 
       return parsed.entries.filter((entry) =>
         typeof entry.id === 'string' &&
-        (entry.planet === 'earth' || entry.planet === 'mars' || entry.planet === 'moon') &&
+        (
+          entry.planet === 'earth' ||
+          entry.planet === 'mars' ||
+          entry.planet === 'moon' ||
+          entry.planet === 'venus' ||
+          entry.planet === 'europa'
+        ) &&
         typeof entry.poiId === 'string' &&
         typeof entry.poiName === 'string' &&
         typeof entry.sampleId === 'string' &&

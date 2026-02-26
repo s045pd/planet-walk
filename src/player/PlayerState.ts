@@ -12,6 +12,8 @@ export const PLANET_GRAVITY: Record<string, GravityConfig> = {
   earth: { name: '地球', gravity: 9.81, radius: 1000 },
   mars: { name: '火星', gravity: 3.72, radius: 532 },
   moon: { name: '月球', gravity: 1.62, radius: 272 },
+  venus: { name: '金星', gravity: 8.87, radius: 950 },
+  europa: { name: '欧罗巴', gravity: 1.315, radius: 245 },
 };
 
 /** 玩家状态：位置、朝向、速度 */

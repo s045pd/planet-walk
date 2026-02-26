@@ -188,6 +188,16 @@ export class ProceduralAudio {
           noiseGain: 0.34,
           duration: 0.2,
         };
+      case 'venus':
+        return {
+          toneFrequency: 110,
+          toneType: 'triangle',
+          toneGain: 0.18,
+          noiseFrequency: 620,
+          noiseQ: 0.6,
+          noiseGain: 0.28,
+          duration: 0.21,
+        };
       case 'moon':
         return {
           toneFrequency: 190,
@@ -197,6 +207,16 @@ export class ProceduralAudio {
           noiseQ: 2.2,
           noiseGain: 0.15,
           duration: 0.11,
+        };
+      case 'europa':
+        return {
+          toneFrequency: 175,
+          toneType: 'square',
+          toneGain: 0.11,
+          noiseFrequency: 1850,
+          noiseQ: 1.9,
+          noiseGain: 0.19,
+          duration: 0.12,
         };
       case 'earth':
       default:
