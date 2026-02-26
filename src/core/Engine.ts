@@ -10,6 +10,7 @@ export class Engine implements IDisposable {
       canvas: config.canvas,
       antialias: config.antialias,
       logarithmicDepthBuffer: config.logarithmicDepthBuffer,
+      preserveDrawingBuffer: true,
     });
     this.renderer.setPixelRatio(config.pixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
