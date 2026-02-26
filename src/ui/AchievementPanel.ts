@@ -4,12 +4,7 @@ import {
   type AchievementManager,
 } from '../achievement/AchievementManager';
 import type { AchievementCategory } from '../achievement/AchievementData';
-
-const CATEGORY_LABELS: Record<AchievementCategory, string> = {
-  exploration: '探索成就',
-  discovery: '发现成就',
-  challenge: '挑战成就',
-};
+import { getLocale, onLocaleChange, t } from '../i18n';
 
 const ICON_EMOJI: Record<string, string> = {
   planet: '🪐',
@@ -29,8 +24,12 @@ export class AchievementPanel implements IDisposable {
   private readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
   private readonly content: HTMLDivElement;
+  private readonly title: HTMLDivElement;
+  private readonly subtitle: HTMLDivElement;
+  private readonly closeButton: HTMLButtonElement;
   private readonly manager: AchievementManager;
   private readonly unsubscribe: () => void;
+  private readonly unsubscribeLocaleChange: () => void;
   private visible = false;
   private closeTimer = 0;
 
@@ -80,34 +79,33 @@ export class AchievementPanel implements IDisposable {
     const headerLeft = document.createElement('div');
     headerLeft.style.minWidth = '0';
 
-    const title = document.createElement('div');
-    title.textContent = '成就';
-    title.style.fontSize = 'clamp(18px, 4.8vw, 22px)';
-    title.style.fontWeight = '700';
+    this.title = document.createElement('div');
+    this.title.style.fontSize = 'clamp(18px, 4.8vw, 22px)';
+    this.title.style.fontWeight = '700';
 
-    const subtitle = document.createElement('div');
-    subtitle.textContent = 'Press Tab to close';
-    subtitle.style.marginTop = '4px';
-    subtitle.style.fontSize = 'clamp(11px, 2.8vw, 12px)';
-    subtitle.style.opacity = '0.75';
+    this.subtitle = document.createElement('div');
+    this.subtitle.style.marginTop = '4px';
+    this.subtitle.style.fontSize = 'clamp(11px, 2.8vw, 12px)';
+    this.subtitle.style.opacity = '0.75';
 
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.textContent = '✕';
-    closeButton.setAttribute('aria-label', 'Close achievement panel');
-    closeButton.style.width = '44px';
-    closeButton.style.height = '44px';
-    closeButton.style.borderRadius = '8px';
-    closeButton.style.border = '1px solid rgba(148, 196, 255, 0.55)';
-    closeButton.style.background = 'rgba(10, 23, 42, 0.95)';
-    closeButton.style.color = '#eef6ff';
-    closeButton.style.cursor = 'pointer';
-    closeButton.style.fontSize = 'clamp(13px, 3.4vw, 14px)';
-    closeButton.style.lineHeight = '1';
-    closeButton.addEventListener('click', () => this.close());
+    this.closeButton = document.createElement('button');
+    this.closeButton.type = 'button';
+    this.closeButton.textContent = '✕';
+    this.closeButton.style.width = '44px';
+    this.closeButton.style.height = '44px';
+    this.closeButton.style.borderRadius = '8px';
+    this.closeButton.style.border = '1px solid rgba(148, 196, 255, 0.55)';
+    this.closeButton.style.background = 'rgba(10, 23, 42, 0.95)';
+    this.closeButton.style.color = '#eef6ff';
+    this.closeButton.style.cursor = 'pointer';
+    this.closeButton.style.fontSize = 'clamp(13px, 3.4vw, 14px)';
+    this.closeButton.style.lineHeight = '1';
+    this.closeButton.addEventListener('click', () => this.close());
 
-    headerLeft.append(title, subtitle);
-    header.append(headerLeft, closeButton);
+    this.applyStaticTexts();
+
+    headerLeft.append(this.title, this.subtitle);
+    header.append(headerLeft, this.closeButton);
 
     this.content = document.createElement('div');
     this.content.style.flex = '1';
@@ -126,6 +124,12 @@ export class AchievementPanel implements IDisposable {
     this.unsubscribe = this.manager.onChange((statuses) => {
       if (this.visible) {
         this.render(statuses);
+      }
+    });
+    this.unsubscribeLocaleChange = onLocaleChange(() => {
+      this.applyStaticTexts();
+      if (this.visible) {
+        this.render(this.manager.getStatuses());
       }
     });
   }
@@ -171,6 +175,7 @@ export class AchievementPanel implements IDisposable {
 
   dispose(): void {
     this.unsubscribe();
+    this.unsubscribeLocaleChange();
     window.clearTimeout(this.closeTimer);
     window.removeEventListener('resize', this.onResize);
     this.root.remove();
@@ -192,7 +197,7 @@ export class AchievementPanel implements IDisposable {
       section.style.gap = '8px';
 
       const heading = document.createElement('div');
-      heading.textContent = CATEGORY_LABELS[category];
+      heading.textContent = t(`achievementPanel.category.${category}`);
       heading.style.fontSize = 'clamp(12px, 3vw, 13px)';
       heading.style.fontWeight = '700';
       heading.style.color = '#b5d8ff';
@@ -252,7 +257,9 @@ export class AchievementPanel implements IDisposable {
     left.append(icon, name);
 
     const badge = document.createElement('span');
-    badge.textContent = status.unlocked ? '已解锁' : '未解锁';
+    badge.textContent = status.unlocked
+      ? t('achievementPanel.badge.unlocked')
+      : t('achievementPanel.badge.locked');
     badge.style.fontSize = 'clamp(10px, 2.6vw, 11px)';
     badge.style.padding = '2px 7px';
     badge.style.borderRadius = '999px';
@@ -294,7 +301,9 @@ export class AchievementPanel implements IDisposable {
 
     if (status.unlockedAt) {
       const unlockedAt = document.createElement('div');
-      unlockedAt.textContent = `解锁时间: ${new Date(status.unlockedAt).toLocaleString()}`;
+      unlockedAt.textContent = t('achievementPanel.unlockedAt', {
+        time: new Date(status.unlockedAt).toLocaleString(getLocale()),
+      });
       unlockedAt.style.fontSize = 'clamp(10px, 2.6vw, 11px)';
       unlockedAt.style.opacity = '0.72';
       card.appendChild(unlockedAt);
@@ -328,5 +337,11 @@ export class AchievementPanel implements IDisposable {
     this.panel.style.borderRadius = '0';
     this.panel.style.border = 'none';
     this.panel.style.borderLeft = '1px solid rgba(157, 201, 255, 0.4)';
+  }
+
+  private applyStaticTexts(): void {
+    this.title.textContent = t('achievementPanel.title');
+    this.subtitle.textContent = t('achievementPanel.subtitle');
+    this.closeButton.setAttribute('aria-label', t('achievementPanel.closeAria'));
   }
 }

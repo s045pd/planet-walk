@@ -1,16 +1,18 @@
 import type { IDisposable } from '../core/types';
+import { onLocaleChange, t } from '../i18n';
 
 /**
  * 降落按钮：从轨道模式进入地表漫步
  */
 export class LandButton implements IDisposable {
   private readonly button: HTMLButtonElement;
+  private readonly unsubscribeLocaleChange: () => void;
   private onClick: (() => void) | null = null;
   private lastClickAt = 0;
 
   constructor() {
     this.button = document.createElement('button');
-    this.button.textContent = '🚀 降落到地表';
+    this.button.textContent = t('landButton.label');
     this.button.type = 'button';
     this.button.style.cssText = `
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -41,6 +43,9 @@ export class LandButton implements IDisposable {
       this.onClick?.();
     });
     document.body.appendChild(this.button);
+    this.unsubscribeLocaleChange = onLocaleChange(() => {
+      this.button.textContent = t('landButton.label');
+    });
   }
 
   setOnClick(callback: () => void): void {
@@ -56,6 +61,7 @@ export class LandButton implements IDisposable {
   }
 
   dispose(): void {
+    this.unsubscribeLocaleChange();
     this.button.remove();
   }
 }

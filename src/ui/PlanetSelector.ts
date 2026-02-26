@@ -1,5 +1,6 @@
 import type { IDisposable } from '../core/types';
 import type { PlanetType } from '../planet/PlanetFactory';
+import { onLocaleChange, t } from '../i18n';
 
 export interface PlanetSelectorConfig {
   initialPlanet: PlanetType;
@@ -11,6 +12,7 @@ export class PlanetSelector implements IDisposable {
   private readonly root: HTMLDivElement;
   private readonly buttons: Record<PlanetType, HTMLButtonElement>;
   private readonly onPlanetSelect: (planet: PlanetType) => void;
+  private readonly unsubscribeLocaleChange: () => void;
   private activePlanet: PlanetType;
   private visible = true;
   private disabled = false;
@@ -38,13 +40,17 @@ export class PlanetSelector implements IDisposable {
     this.root.style.pointerEvents = 'none';
 
     this.buttons = {
-      earth: this.createButton('地球', 'earth'),
-      mars: this.createButton('火星', 'mars'),
-      moon: this.createButton('月球', 'moon'),
+      earth: this.createButton('planet.earth', 'earth'),
+      mars: this.createButton('planet.mars', 'mars'),
+      moon: this.createButton('planet.moon', 'moon'),
     };
 
     this.root.append(this.buttons.earth, this.buttons.mars, this.buttons.moon);
     document.body.appendChild(this.root);
+    this.unsubscribeLocaleChange = onLocaleChange(() => {
+      this.refreshLabels();
+    });
+    this.refreshLabels();
     this.applyResponsiveLayout();
     window.addEventListener('resize', this.onResize);
     this.setActive(config.initialPlanet);
@@ -81,13 +87,15 @@ export class PlanetSelector implements IDisposable {
   }
 
   dispose(): void {
+    this.unsubscribeLocaleChange();
     window.removeEventListener('resize', this.onResize);
     this.root.remove();
   }
 
-  private createButton(label: string, planet: PlanetType): HTMLButtonElement {
+  private createButton(labelKey: string, planet: PlanetType): HTMLButtonElement {
     const button = document.createElement('button');
-    button.textContent = label;
+    button.textContent = t(labelKey);
+    button.dataset.labelKey = labelKey;
     button.type = 'button';
     button.style.padding = '6px 10px';
     button.style.minHeight = '44px';
@@ -106,6 +114,15 @@ export class PlanetSelector implements IDisposable {
       this.onPlanetSelect(planet);
     });
     return button;
+  }
+
+  private refreshLabels(): void {
+    for (const button of Object.values(this.buttons)) {
+      const labelKey = button.dataset.labelKey;
+      if (labelKey) {
+        button.textContent = t(labelKey);
+      }
+    }
   }
 
   private onResize = (): void => {

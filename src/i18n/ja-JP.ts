@@ -1,0 +1,80 @@
+import type { TranslationKey } from './zh-CN';
+
+export const jaJP: Record<TranslationKey, string> = {
+  'app.scanner.started': 'スキャナーを起動しました。',
+  'app.scanner.stopped': 'スキャナーを停止しました。',
+  'app.scanner.landFirst': 'サンプル採取の前に地表へ着陸してください。',
+
+  'planet.earth': '地球',
+  'planet.mars': '火星',
+  'planet.moon': '月',
+
+  'hud.planet': '惑星: {planet}',
+  'hud.geo': '緯度: {lat}°, 経度: {lng}°, 高度: {alt} m',
+  'hud.time': '現地時刻: {time} ({scale})',
+  'timeScale.paused': '一時停止',
+
+  'guide.orbitHtml': '🌍 ドラッグで回転・ホイールでズーム<br>下の <b>着陸</b> ボタンで地表歩行を開始',
+  'guide.firstPersonHtml': '🚶 WASD 移動・マウス視点・Space ジャンプ<br>ESC で軌道視点へ戻る',
+
+  'landButton.label': '🚀 地表へ着陸',
+
+  'achievementPanel.title': '実績',
+  'achievementPanel.subtitle': 'Tab で閉じる',
+  'achievementPanel.closeAria': '実績パネルを閉じる',
+  'achievementPanel.category.exploration': '探索実績',
+  'achievementPanel.category.discovery': '発見実績',
+  'achievementPanel.category.challenge': 'チャレンジ実績',
+  'achievementPanel.badge.unlocked': '解除済み',
+  'achievementPanel.badge.locked': '未解除',
+  'achievementPanel.unlockedAt': '解除日時: {time}',
+
+  'science.title': 'サイエンススキャナー',
+  'science.logTitle': '採取ログ',
+  'science.status.idle': '状態: 待機中 (E で開始)',
+  'science.status.active': '状態: スキャン中 (E で停止)',
+  'science.instruction': 'E でスキャナーを起動し、地表に照準を合わせてください。',
+  'science.noHit': '地表を検出できません。視点を地面に向けてください。',
+  'science.data.altitude': '高度: {value} m',
+  'science.data.slope': '傾斜: {value}°',
+  'science.data.geology': '地質タイプ: {value}',
+  'science.data.coords': '座標: {lat}°, {lng}°',
+  'science.data.distance': '検出距離: {value} m',
+  'science.collect.none': '近くに採取ポイントはありません',
+  'science.collect.collected': '採取済み',
+  'science.collect.action': 'F で採取',
+  'science.log.empty': 'サンプル記録はまだありません。',
+
+  'photoMode.title': 'フォトモード',
+  'photoMode.filter': 'フィルター',
+  'photoMode.filter.normal': '標準',
+  'photoMode.filter.vintage': 'ビンテージ',
+  'photoMode.filter.sciFi': 'SF',
+  'photoMode.filter.bw': 'モノクロ',
+  'photoMode.hideHud': 'HUD を隠す',
+  'photoMode.capture': '撮影',
+  'photoMode.tipExit': 'P で終了',
+  'photoMode.toastSaved': 'スクリーンショットを保存しました！',
+
+  'help.title': 'キーボードショートカット',
+  'help.subtitle': 'H または Esc で閉じる',
+  'help.shortcut.h': 'ヘルプオーバーレイの表示切替',
+  'help.shortcut.tab': '実績パネルの開閉',
+  'help.shortcut.p': 'フォトモード切替',
+  'help.shortcut.t': '昼夜の時間速度を切替',
+  'help.shortcut.e': 'スキャナー切替',
+  'help.shortcut.f': '近くのサンプルを採取',
+  'help.shortcut.m': 'ミニマップ全画面を切替',
+  'help.shortcut.f3': 'デバッグパネル切替',
+  'help.shortcut.esc': 'オーバーレイを閉じる/軌道へ戻る',
+  'help.shortcut.wasd': '地表で移動',
+  'help.shortcut.space': '地表でジャンプ',
+  'help.shortcut.mouse': '軌道回転 / ズーム',
+
+  'minimap.fullscreenHint': 'M で閉じる',
+  'loading.logo': 'プラネットウォーク',
+
+  'infoCard.unknownLandmark': '不明なランドマーク',
+
+  'achievementToast.unlocked': '実績解除: {name}',
+};

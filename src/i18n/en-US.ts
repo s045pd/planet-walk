@@ -1,0 +1,80 @@
+import type { TranslationKey } from './zh-CN';
+
+export const enUS: Record<TranslationKey, string> = {
+  'app.scanner.started': 'Scanner activated.',
+  'app.scanner.stopped': 'Scanner deactivated.',
+  'app.scanner.landFirst': 'Land on the surface before collecting samples.',
+
+  'planet.earth': 'Earth',
+  'planet.mars': 'Mars',
+  'planet.moon': 'Moon',
+
+  'hud.planet': 'Planet: {planet}',
+  'hud.geo': 'Lat: {lat}°, Lng: {lng}°, Alt: {alt} m',
+  'hud.time': 'Local Time: {time} ({scale})',
+  'timeScale.paused': 'Paused',
+
+  'guide.orbitHtml': '🌍 Drag to rotate · Scroll to zoom<br>Click <b>Land</b> below to start surface walking',
+  'guide.firstPersonHtml': '🚶 WASD move · Mouse look · Space jump<br>Press ESC to return to orbit',
+
+  'landButton.label': '🚀 Land on Surface',
+
+  'achievementPanel.title': 'Achievements',
+  'achievementPanel.subtitle': 'Press Tab to close',
+  'achievementPanel.closeAria': 'Close achievement panel',
+  'achievementPanel.category.exploration': 'Exploration',
+  'achievementPanel.category.discovery': 'Discovery',
+  'achievementPanel.category.challenge': 'Challenge',
+  'achievementPanel.badge.unlocked': 'Unlocked',
+  'achievementPanel.badge.locked': 'Locked',
+  'achievementPanel.unlockedAt': 'Unlocked at: {time}',
+
+  'science.title': 'Science Scanner',
+  'science.logTitle': 'Collection Log',
+  'science.status.idle': 'Status: Idle (Press E to start)',
+  'science.status.active': 'Status: Scanning (Press E to stop)',
+  'science.instruction': 'Press E to activate scanner and point at the ground.',
+  'science.noHit': 'No terrain hit. Aim toward the surface.',
+  'science.data.altitude': 'Altitude: {value} m',
+  'science.data.slope': 'Slope: {value}°',
+  'science.data.geology': 'Geology: {value}',
+  'science.data.coords': 'Coords: {lat}°, {lng}°',
+  'science.data.distance': 'Scan Distance: {value} m',
+  'science.collect.none': 'No sample point nearby',
+  'science.collect.collected': 'Collected',
+  'science.collect.action': 'Press F to collect',
+  'science.log.empty': 'No samples collected yet.',
+
+  'photoMode.title': 'Photo Mode',
+  'photoMode.filter': 'Filter',
+  'photoMode.filter.normal': 'Normal',
+  'photoMode.filter.vintage': 'Vintage',
+  'photoMode.filter.sciFi': 'Sci-Fi',
+  'photoMode.filter.bw': 'B/W',
+  'photoMode.hideHud': 'Hide HUD',
+  'photoMode.capture': 'Capture',
+  'photoMode.tipExit': 'P to exit',
+  'photoMode.toastSaved': 'Screenshot saved!',
+
+  'help.title': 'Keyboard Shortcuts',
+  'help.subtitle': 'Press H or Esc to close',
+  'help.shortcut.h': 'Toggle this help overlay',
+  'help.shortcut.tab': 'Open/close achievements panel',
+  'help.shortcut.p': 'Toggle photo mode',
+  'help.shortcut.t': 'Cycle day/night time speed',
+  'help.shortcut.e': 'Toggle scanner',
+  'help.shortcut.f': 'Collect nearby sample',
+  'help.shortcut.m': 'Toggle minimap fullscreen',
+  'help.shortcut.f3': 'Toggle debug panel',
+  'help.shortcut.esc': 'Close overlay/panel or return to orbit',
+  'help.shortcut.wasd': 'Move on surface',
+  'help.shortcut.space': 'Jump on surface',
+  'help.shortcut.mouse': 'Orbit rotate / zoom',
+
+  'minimap.fullscreenHint': 'Press M to close',
+  'loading.logo': 'Planet Walk',
+
+  'infoCard.unknownLandmark': 'Unknown landmark',
+
+  'achievementToast.unlocked': 'Achievement unlocked: {name}',
+};

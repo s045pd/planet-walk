@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { IDisposable } from '../core/types';
+import { onLocaleChange, t } from '../i18n';
 
 export interface HUDData {
   planetName: string;
@@ -17,6 +18,8 @@ export class HUD implements IDisposable {
   private readonly planetLine: HTMLDivElement;
   private readonly geoLine: HTMLDivElement;
   private readonly timeLine: HTMLDivElement;
+  private readonly unsubscribeLocaleChange: () => void;
+  private lastData: HUDData | null = null;
   private visible = true;
 
   constructor() {
@@ -50,15 +53,14 @@ export class HUD implements IDisposable {
     document.body.appendChild(this.root);
     this.applyResponsiveLayout();
     window.addEventListener('resize', this.onResize);
+    this.unsubscribeLocaleChange = onLocaleChange(() => {
+      this.render();
+    });
   }
 
   update(data: HUDData): void {
-    this.planetLine.textContent = `Planet: ${data.planetName.toUpperCase()}`;
-    const displayAlt = Math.max(0, data.alt);
-    this.geoLine.textContent =
-      `Lat: ${data.lat.toFixed(2)}°, Lng: ${data.lng.toFixed(2)}°, Alt: ${displayAlt.toFixed(1)} m`;
-    this.timeLine.textContent =
-      `Local Time: ${data.localTime} (${data.timeScaleLabel})`;
+    this.lastData = data;
+    this.render();
   }
 
   setVisible(visible: boolean): void {
@@ -70,8 +72,39 @@ export class HUD implements IDisposable {
   }
 
   dispose(): void {
+    this.unsubscribeLocaleChange();
     window.removeEventListener('resize', this.onResize);
     this.root.remove();
+  }
+
+  private render(): void {
+    if (!this.lastData) {
+      return;
+    }
+
+    const { planetName, lat, lng, alt, localTime, timeScaleLabel } = this.lastData;
+    const planet = this.getLocalizedPlanetName(planetName);
+    const displayAlt = Math.max(0, alt);
+    const localizedScale = timeScaleLabel === 'Paused'
+      ? t('timeScale.paused')
+      : timeScaleLabel;
+
+    this.planetLine.textContent = t('hud.planet', { planet });
+    this.geoLine.textContent = t('hud.geo', {
+      lat: lat.toFixed(2),
+      lng: lng.toFixed(2),
+      alt: displayAlt.toFixed(1),
+    });
+    this.timeLine.textContent = t('hud.time', {
+      time: localTime,
+      scale: localizedScale,
+    });
+  }
+
+  private getLocalizedPlanetName(planetName: string): string {
+    const key = `planet.${planetName.toLowerCase()}`;
+    const localized = t(key);
+    return localized === key ? planetName.toUpperCase() : localized;
   }
 
   private onResize = (): void => {

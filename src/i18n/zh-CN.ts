@@ -1,0 +1,80 @@
+export const zhCN = {
+  'app.scanner.started': '扫描仪已启动。',
+  'app.scanner.stopped': '扫描仪已关闭。',
+  'app.scanner.landFirst': '请先降落到地表后再采集样本。',
+
+  'planet.earth': '地球',
+  'planet.mars': '火星',
+  'planet.moon': '月球',
+
+  'hud.planet': '星球: {planet}',
+  'hud.geo': '纬度: {lat}°, 经度: {lng}°, 海拔: {alt} m',
+  'hud.time': '本地时间: {time} ({scale})',
+  'timeScale.paused': '暂停',
+
+  'guide.orbitHtml': '🌍 拖拽旋转 · 滚轮缩放<br>点击下方 <b>降落</b> 按钮进入地表漫步',
+  'guide.firstPersonHtml': '🚶 WASD 移动 · 鼠标转向 · 空格跳跃<br>ESC 返回轨道视角',
+
+  'landButton.label': '🚀 降落到地表',
+
+  'achievementPanel.title': '成就',
+  'achievementPanel.subtitle': '按 Tab 关闭',
+  'achievementPanel.closeAria': '关闭成就面板',
+  'achievementPanel.category.exploration': '探索成就',
+  'achievementPanel.category.discovery': '发现成就',
+  'achievementPanel.category.challenge': '挑战成就',
+  'achievementPanel.badge.unlocked': '已解锁',
+  'achievementPanel.badge.locked': '未解锁',
+  'achievementPanel.unlockedAt': '解锁时间: {time}',
+
+  'science.title': '科学扫描仪',
+  'science.logTitle': '采集日志',
+  'science.status.idle': '状态: 待机 (E 开启)',
+  'science.status.active': '状态: 扫描中 (E 关闭)',
+  'science.instruction': '按 E 激活扫描仪并对准地面。',
+  'science.noHit': '未命中地表，请将视角对准地面。',
+  'science.data.altitude': '海拔: {value} m',
+  'science.data.slope': '坡度: {value}°',
+  'science.data.geology': '地质类型: {value}',
+  'science.data.coords': '坐标: {lat}°, {lng}°',
+  'science.data.distance': '探测距离: {value} m',
+  'science.collect.none': '附近无采集点',
+  'science.collect.collected': '已采集',
+  'science.collect.action': '按 F 采集',
+  'science.log.empty': '暂无样本记录。',
+
+  'photoMode.title': '照片模式',
+  'photoMode.filter': '滤镜',
+  'photoMode.filter.normal': '正常',
+  'photoMode.filter.vintage': '复古',
+  'photoMode.filter.sciFi': '科幻',
+  'photoMode.filter.bw': '黑白',
+  'photoMode.hideHud': '隐藏 HUD',
+  'photoMode.capture': '拍照',
+  'photoMode.tipExit': 'P 退出',
+  'photoMode.toastSaved': '截图已保存！',
+
+  'help.title': '键盘快捷键',
+  'help.subtitle': '按 H 或 Esc 关闭',
+  'help.shortcut.h': '打开/关闭帮助面板',
+  'help.shortcut.tab': '打开/关闭成就面板',
+  'help.shortcut.p': '切换照片模式',
+  'help.shortcut.t': '切换昼夜时间流速',
+  'help.shortcut.e': '开关扫描仪',
+  'help.shortcut.f': '采集附近样本',
+  'help.shortcut.m': '切换小地图全屏',
+  'help.shortcut.f3': '切换调试面板',
+  'help.shortcut.esc': '关闭面板或返回轨道',
+  'help.shortcut.wasd': '地表移动',
+  'help.shortcut.space': '地表跳跃',
+  'help.shortcut.mouse': '轨道旋转 / 缩放',
+
+  'minimap.fullscreenHint': '按 M 关闭',
+  'loading.logo': '星球漫步',
+
+  'infoCard.unknownLandmark': '未知地标',
+
+  'achievementToast.unlocked': '成就解锁: {name}',
+} as const;
+
+export type TranslationKey = keyof typeof zhCN;

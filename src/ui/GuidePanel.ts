@@ -1,10 +1,13 @@
 import type { IDisposable } from '../core/types';
+import { onLocaleChange, t } from '../i18n';
 
 /**
  * 操作引导面板：告诉用户怎么玩
  */
 export class GuidePanel implements IDisposable {
   private readonly root: HTMLDivElement;
+  private readonly unsubscribeLocaleChange: () => void;
+  private mode: 'orbit' | 'firstPerson' | null = null;
   private visible = true;
   private fadeTimer: number | null = null;
 
@@ -21,24 +24,23 @@ export class GuidePanel implements IDisposable {
       transition: opacity 0.5s; line-height: 1.8;
     `;
     document.body.appendChild(this.root);
+    this.unsubscribeLocaleChange = onLocaleChange(() => {
+      this.renderMode();
+    });
   }
 
   /** 显示轨道模式引导 */
   showOrbitGuide(): void {
-    this.root.innerHTML = `
-      🌍 拖拽旋转 · 滚轮缩放<br>
-      点击下方 <b>降落</b> 按钮进入地表漫步
-    `;
+    this.mode = 'orbit';
+    this.renderMode();
     this.root.style.opacity = '1';
     this.scheduleAutoFade();
   }
 
   /** 显示第一人称模式引导 */
   showFirstPersonGuide(): void {
-    this.root.innerHTML = `
-      🚶 WASD 移动 · 鼠标转向 · 空格跳跃<br>
-      ESC 返回轨道视角
-    `;
+    this.mode = 'firstPerson';
+    this.renderMode();
     this.root.style.opacity = '1';
     this.scheduleAutoFade();
   }
@@ -60,11 +62,22 @@ export class GuidePanel implements IDisposable {
   }
 
   dispose(): void {
+    this.unsubscribeLocaleChange();
     if (this.fadeTimer !== null) {
       window.clearTimeout(this.fadeTimer);
       this.fadeTimer = null;
     }
     this.root.remove();
+  }
+
+  private renderMode(): void {
+    if (this.mode === 'orbit') {
+      this.root.innerHTML = t('guide.orbitHtml');
+      return;
+    }
+    if (this.mode === 'firstPerson') {
+      this.root.innerHTML = t('guide.firstPersonHtml');
+    }
   }
 
   private scheduleAutoFade(): void {
