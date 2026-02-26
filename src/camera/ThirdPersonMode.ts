@@ -11,7 +11,7 @@ export class ThirdPersonMode {
   maxDistance = 25;
   pitch = 0.3;
   yaw = 0;
-  eyeHeight = 1.6;
+  eyeHeight = 1.85;
   sensitivity = 0.002;
   zoomSpeed = 0.0018;
 
