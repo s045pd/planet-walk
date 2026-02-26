@@ -6,6 +6,7 @@ import { AstronautModel } from '../player/AstronautModel';
 import { OrbitMode } from './OrbitMode';
 import { ThirdPersonMode } from './ThirdPersonMode';
 import { TransitionController } from './TransitionController';
+import { getMouseSensitivity } from '../ui/SettingsPanel';
 
 export type CameraMode = 'orbit' | 'firstPerson' | 'thirdPerson';
 
@@ -53,11 +54,13 @@ export class CameraManager implements IUpdatable, IDisposable {
   private readonly _fallbackLookTitle = 'Pointer lock unavailable. Hold left mouse and drag to look.';
 
   private readonly _firstPersonLookHandler = (dx: number, dy: number): void => {
+    this._playerController.firstPerson.sensitivity = getMouseSensitivity();
     const sensitivityMultiplier = this._input.pointerLocked ? 1 : 4;
     this._playerController.firstPerson.applyMouseDelta(dx, dy, sensitivityMultiplier);
   };
 
   private readonly _thirdPersonLookHandler = (dx: number, dy: number): void => {
+    this.thirdPersonMode.sensitivity = getMouseSensitivity();
     this.thirdPersonMode.applyMouseDelta(dx, dy);
   };
 
