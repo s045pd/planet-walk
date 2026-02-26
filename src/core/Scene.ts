@@ -18,7 +18,7 @@ export class SceneManager implements IDisposable {
   constructor(planet: Planet) {
     this.planet = planet;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x050916);
+    this.scene.background = new THREE.Color(0x000000);
     this.createSkybox();
     this.addPlanet();
     this.createStars();
@@ -66,8 +66,8 @@ export class SceneManager implements IDisposable {
       side: THREE.BackSide,
       depthWrite: false,
       uniforms: {
-        topColor: { value: new THREE.Color(0x0b1230) },
-        bottomColor: { value: new THREE.Color(0x050916) },
+        topColor: { value: new THREE.Color(0x000000) },
+        bottomColor: { value: new THREE.Color(0x000000) },
         brightness: { value: 1.0 },
       },
       vertexShader: `
@@ -99,68 +99,72 @@ export class SceneManager implements IDisposable {
   }
 
   private createStars(): void {
-    const starSizeMultiplier = 3.0;
     const positions = new Float32Array(STAR_COUNT * 3);
     const sizes = new Float32Array(STAR_COUNT);
-    const brightness = new Float32Array(STAR_COUNT);
-    const minRadius = EARTH_RADIUS * 45;
-    const maxRadius = EARTH_RADIUS * 65;
+    const colors = new Float32Array(STAR_COUNT * 3);
+    const starRadius = EARTH_RADIUS * 55;
     const visibilityUniform = { value: 1.0 };
 
+    // 真实星空：大量暗星 + 少数亮星，颜色偏暖白/冷白
     for (let i = 0; i < STAR_COUNT; i++) {
-      const r = THREE.MathUtils.lerp(minRadius, maxRadius, Math.random());
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(THREE.MathUtils.randFloatSpread(2));
 
-      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i * 3 + 2] = r * Math.cos(phi);
-      sizes[i] = THREE.MathUtils.randFloat(3.0, 8.8);
-      brightness[i] = THREE.MathUtils.randFloat(0.9, 1.7);
+      positions[i * 3] = starRadius * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = starRadius * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = starRadius * Math.cos(phi);
+
+      // 大部分星星很小(1-1.5px)，少数亮星稍大(2-3px)
+      const isBright = Math.random() < 0.08;
+      sizes[i] = isBright ? THREE.MathUtils.randFloat(2.0, 3.0) : THREE.MathUtils.randFloat(0.8, 1.5);
+
+      // 星星颜色：白色为主，少量偏暖(橙)或偏冷(蓝白)
+      const colorRoll = Math.random();
+      if (colorRoll < 0.7) {
+        // 白色
+        colors[i * 3] = 1.0; colors[i * 3 + 1] = 1.0; colors[i * 3 + 2] = 1.0;
+      } else if (colorRoll < 0.85) {
+        // 暖白/淡黄
+        colors[i * 3] = 1.0; colors[i * 3 + 1] = 0.92; colors[i * 3 + 2] = 0.8;
+      } else {
+        // 冷白/淡蓝白
+        colors[i * 3] = 0.85; colors[i * 3 + 1] = 0.9; colors[i * 3 + 2] = 1.0;
+      }
     }
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    geometry.setAttribute('brightness', new THREE.BufferAttribute(brightness, 1));
+    geometry.setAttribute('starColor', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      depthTest: false,
-      blending: THREE.NormalBlending,
+      depthTest: true,
       uniforms: {
         visibility: visibilityUniform,
-        sizeMultiplier: { value: starSizeMultiplier },
-        brightnessBoost: { value: 1.45 },
       },
       vertexShader: `
         attribute float size;
-        attribute float brightness;
-        uniform float sizeMultiplier;
-        varying float vBrightness;
+        attribute vec3 starColor;
+        varying vec3 vColor;
 
         void main() {
-          vBrightness = brightness;
+          vColor = starColor;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          float dist = length(mvPosition.xyz);
-          gl_PointSize = max(2.0, size * sizeMultiplier * (300.0 / max(dist * 0.004, 1.0)));
+          gl_PointSize = size;
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
       fragmentShader: `
         uniform float visibility;
-        uniform float brightnessBoost;
-        varying float vBrightness;
+        varying vec3 vColor;
 
         void main() {
-          float d = distance(gl_PointCoord, vec2(0.5));
+          float d = length(gl_PointCoord - vec2(0.5));
           if (d > 0.5) discard;
-          float core = smoothstep(0.5, 0.05, d);
-          float glow = core * vBrightness * brightnessBoost;
-          float alpha = clamp(glow * visibility, 0.0, 1.0);
-          vec3 color = vec3(0.92, 0.95, 1.0) * glow;
-          gl_FragColor = vec4(color, alpha);
+          float sharp = smoothstep(0.5, 0.15, d);
+          gl_FragColor = vec4(vColor * sharp, sharp * visibility);
         }
       `,
     });
@@ -170,10 +174,11 @@ export class SceneManager implements IDisposable {
     this.stars.renderOrder = -90;
     this.scene.add(this.stars);
 
-    const milkyCount = Math.max(2200, Math.floor(STAR_COUNT * 0.5));
+    // 银河带：密集的微小星点形成带状结构
+    const milkyCount = Math.max(3000, Math.floor(STAR_COUNT * 0.6));
     const milkyPositions = new Float32Array(milkyCount * 3);
     const milkySizes = new Float32Array(milkyCount);
-    const milkyBrightness = new Float32Array(milkyCount);
+    const milkyColors = new Float32Array(milkyCount * 3);
     const bandDirection = new THREE.Vector3();
     const bandTiltAxis = new THREE.Vector3(1, 0.22, 0.15).normalize();
     const bandTilt = new THREE.Quaternion().setFromAxisAngle(
@@ -181,9 +186,9 @@ export class SceneManager implements IDisposable {
       THREE.MathUtils.degToRad(38),
     );
     for (let i = 0; i < milkyCount; i++) {
-      const r = THREE.MathUtils.lerp(minRadius * 0.92, maxRadius * 0.98, Math.random());
+      const r = starRadius * THREE.MathUtils.randFloat(0.92, 0.99);
       const theta = Math.random() * Math.PI * 2;
-      const bandOffset = THREE.MathUtils.randFloatSpread(0.16);
+      const bandOffset = THREE.MathUtils.randFloatSpread(0.18);
       const c = Math.cos(bandOffset);
 
       bandDirection
@@ -193,52 +198,47 @@ export class SceneManager implements IDisposable {
       milkyPositions[i * 3] = bandDirection.x * r;
       milkyPositions[i * 3 + 1] = bandDirection.y * r;
       milkyPositions[i * 3 + 2] = bandDirection.z * r;
-      milkySizes[i] = THREE.MathUtils.randFloat(2.4, 6.8);
-      milkyBrightness[i] = THREE.MathUtils.randFloat(0.25, 0.65);
+      milkySizes[i] = THREE.MathUtils.randFloat(0.5, 1.2);
+      // 银河偏淡蓝白
+      const b = THREE.MathUtils.randFloat(0.6, 1.0);
+      milkyColors[i * 3] = b * 0.85;
+      milkyColors[i * 3 + 1] = b * 0.9;
+      milkyColors[i * 3 + 2] = b;
     }
 
     const milkyGeometry = new THREE.BufferGeometry();
     milkyGeometry.setAttribute('position', new THREE.BufferAttribute(milkyPositions, 3));
     milkyGeometry.setAttribute('size', new THREE.BufferAttribute(milkySizes, 1));
-    milkyGeometry.setAttribute('brightness', new THREE.BufferAttribute(milkyBrightness, 1));
+    milkyGeometry.setAttribute('starColor', new THREE.BufferAttribute(milkyColors, 3));
 
     const milkyMaterial = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      depthTest: false,
-      blending: THREE.NormalBlending,
+      depthTest: true,
       uniforms: {
         visibility: visibilityUniform,
-        sizeMultiplier: { value: starSizeMultiplier },
-        brightnessBoost: { value: 0.6 },
       },
       vertexShader: `
         attribute float size;
-        attribute float brightness;
-        uniform float sizeMultiplier;
-        varying float vBrightness;
+        attribute vec3 starColor;
+        varying vec3 vColor;
 
         void main() {
-          vBrightness = brightness;
+          vColor = starColor;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          float dist = length(mvPosition.xyz);
-          gl_PointSize = max(1.2, size * sizeMultiplier * (280.0 / max(dist * 0.004, 1.0)));
+          gl_PointSize = size;
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
       fragmentShader: `
         uniform float visibility;
-        uniform float brightnessBoost;
-        varying float vBrightness;
+        varying vec3 vColor;
 
         void main() {
-          float d = distance(gl_PointCoord, vec2(0.5));
+          float d = length(gl_PointCoord - vec2(0.5));
           if (d > 0.5) discard;
-          float core = smoothstep(0.5, 0.05, d) * 0.6;
-          float glow = core * vBrightness * brightnessBoost;
-          float alpha = clamp(glow * visibility * 0.78, 0.0, 1.0);
-          vec3 color = mix(vec3(0.46, 0.56, 0.86), vec3(0.85, 0.88, 1.0), vBrightness) * glow;
-          gl_FragColor = vec4(color, alpha);
+          float sharp = smoothstep(0.5, 0.2, d);
+          gl_FragColor = vec4(vColor * sharp, sharp * visibility * 0.7);
         }
       `,
     });
