@@ -25,6 +25,9 @@ import { GuidePanel } from './ui/GuidePanel';
 import { LandButton } from './ui/LandButton';
 import { Minimap } from './ui/Minimap';
 import { WeatherSystem } from './weather/WeatherSystem';
+import { Scanner } from './science/Scanner';
+import { SampleCollector } from './science/SampleCollector';
+import { SciencePanel } from './ui/SciencePanel';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -46,6 +49,9 @@ export class App implements IDisposable {
   private landButton: LandButton;
   private minimap: Minimap;
   private weatherSystem: WeatherSystem;
+  private scanner: Scanner;
+  private sampleCollector: SampleCollector;
+  private sciencePanel: SciencePanel;
   private minimapFullscreen = false;
   private clock = new THREE.Clock();
   private animationId = 0;
@@ -131,6 +137,19 @@ export class App implements IDisposable {
       weather: planet.config.weather,
     });
 
+    this.scanner = new Scanner({
+      planetType: this.currentPlanet,
+      planetRadius: planet.config.radius,
+      surfaceMesh: planet.mesh,
+    });
+    this.sampleCollector = new SampleCollector({
+      planetType: this.currentPlanet,
+      planetRadius: planet.config.radius,
+    });
+    this.sciencePanel = new SciencePanel();
+    this.sciencePanel.setScannerActive(false);
+    this.sciencePanel.setCollectionLog(this.sampleCollector.getInventory());
+
     // ESC返回轨道
     window.addEventListener('keydown', this.onKeyDown);
 
@@ -143,6 +162,14 @@ export class App implements IDisposable {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === 'KeyE' && !e.repeat) {
+      this.toggleScanner();
+      return;
+    }
+    if (e.code === 'KeyF' && !e.repeat) {
+      this.collectSample();
+      return;
+    }
     if (e.code === 'KeyM' && !e.repeat) {
       this.minimapFullscreen = !this.minimapFullscreen;
       this.minimap.setFullscreen(this.minimapFullscreen);
@@ -152,6 +179,31 @@ export class App implements IDisposable {
       this.returnToOrbit();
     }
   };
+
+  private isSurfaceMode(): boolean {
+    return this.cameraManager.mode === 'firstPerson' || this.cameraManager.mode === 'thirdPerson';
+  }
+
+  private toggleScanner(): void {
+    const next = !this.scanner.isActive;
+    this.scanner.setActive(next);
+    this.sciencePanel.setScannerActive(next);
+    this.sciencePanel.showActionMessage(
+      next ? '扫描仪已启动。' : '扫描仪已关闭。',
+      next,
+    );
+  }
+
+  private collectSample(): void {
+    if (!this.isSurfaceMode()) {
+      this.sciencePanel.showActionMessage('请先降落到地表后再采集样本。');
+      return;
+    }
+
+    const result = this.sampleCollector.collect(this.playerController.state.position);
+    this.sciencePanel.showActionMessage(result.message, result.ok);
+    this.sciencePanel.setCollectionLog(this.sampleCollector.getInventory());
+  }
 
   private computePlayerHeading(
     quaternion: THREE.Quaternion,
@@ -267,6 +319,13 @@ export class App implements IDisposable {
 
     // 切换环境音
     this.audioManager.setPlanet(planetType);
+    this.scanner.switchPlanet({
+      planetType,
+      planetRadius: nextPlanet.config.radius,
+      surfaceMesh: nextPlanet.mesh,
+    });
+    this.sampleCollector.switchPlanet(planetType, nextPlanet.config.radius);
+    this.sciencePanel.updateNearbyTarget(null);
 
     this.currentPlanet = planetType;
     this.planetSelector.setActive(planetType);
@@ -303,9 +362,7 @@ export class App implements IDisposable {
       const delta = this.clock.getDelta();
       this.cameraManager.update(delta);
 
-      const inSurfaceMode =
-        this.cameraManager.mode === 'firstPerson' ||
-        this.cameraManager.mode === 'thirdPerson';
+      const inSurfaceMode = this.isSurfaceMode();
       this.minimap.setVisible(inSurfaceMode);
       if (inSurfaceMode) {
         const playerState = this.playerController.state;
@@ -324,6 +381,14 @@ export class App implements IDisposable {
           this.planet.config.landmarks,
         );
       }
+
+      if (this.scanner.isActive) {
+        this.sciencePanel.updateScanData(this.scanner.scan(this.cameraSystem.camera));
+      }
+      const nearbyTarget = inSurfaceMode
+        ? this.sampleCollector.getNearbyTarget(this.playerController.state.position)
+        : null;
+      this.sciencePanel.updateNearbyTarget(nearbyTarget);
 
       // 更新星球特效（云层/夜景/海洋）
       this.planet.update(delta);
@@ -376,6 +441,7 @@ export class App implements IDisposable {
     this.guidePanel.dispose();
     this.landButton.dispose();
     this.minimap.dispose();
+    this.sciencePanel.dispose();
     this.weatherSystem.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
