@@ -29,6 +29,17 @@ import { PhotoMode } from './camera/PhotoMode';
 import { PhotoModeUI } from './ui/PhotoModeUI';
 import { FilterManager } from './postprocess/FilterManager';
 import type { PhotoFilterType } from './postprocess/FilterManager';
+import { Scanner } from './science/Scanner';
+import { SampleCollector } from './science/SampleCollector';
+import { SciencePanel } from './ui/SciencePanel';
+import {
+  HIDDEN_POIS,
+  PLANET_SAMPLE_TYPES,
+} from './achievement/AchievementData';
+import { AchievementManager } from './achievement/AchievementManager';
+import { AchievementPanel } from './ui/AchievementPanel';
+import { AchievementToast } from './ui/AchievementToast';
+import { DayNightCycle } from './environment/DayNightCycle';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -56,7 +67,18 @@ export class App implements IDisposable {
   private photoModeActive = false;
   private photoModeHideHUD = true;
   private pointerLockEnabledBeforePhoto = false;
+  private scanner: Scanner;
+  private sampleCollector: SampleCollector;
+  private sciencePanel: SciencePanel;
+  private achievementManager: AchievementManager;
+  private achievementPanel: AchievementPanel;
+  private achievementToast: AchievementToast;
+  private achievementUnsubscribes: Array<() => void> = [];
+  private dayNightCycle: DayNightCycle;
   private minimapFullscreen = false;
+  private wasInSurfaceMode = false;
+  private lastPlayerPosition: THREE.Vector3 | null = null;
+  private lastWeatherTag: string | null = null;
   private clock = new THREE.Clock();
   private animationId = 0;
   private currentPlanet: PlanetType = 'earth';
@@ -162,6 +184,40 @@ export class App implements IDisposable {
       onHudToggle: this.onPhotoHUDToggle,
       onFovChange: this.onPhotoFovChange,
     });
+    this.scanner = new Scanner({
+      planetType: this.currentPlanet,
+      planetRadius: planet.config.radius,
+      surfaceMesh: planet.mesh,
+    });
+    this.sampleCollector = new SampleCollector({
+      planetType: this.currentPlanet,
+      planetRadius: planet.config.radius,
+    });
+    this.sciencePanel = new SciencePanel();
+    this.sciencePanel.setScannerActive(false);
+    this.sciencePanel.setCollectionLog(this.sampleCollector.getInventory());
+    this.achievementManager = new AchievementManager();
+    this.achievementPanel = new AchievementPanel(this.achievementManager);
+    this.achievementToast = new AchievementToast();
+    this.achievementUnsubscribes.push(
+      this.achievementManager.onUnlock((status) => {
+        this.achievementToast.show(status);
+      }),
+    );
+
+    this.dayNightCycle = new DayNightCycle({
+      planetRadius: planet.config.radius,
+      sunLight: this.sceneManager.sunlight,
+      ambientLight: this.sceneManager.ambient,
+      skyboxMaterial: this.sceneManager.skyboxMaterial,
+      starsMaterial: this.sceneManager.starsMaterial,
+      onSunDirectionChange: (direction) => {
+        this.planet.setSunDirection(direction);
+      },
+      onAtmosphereUpdate: (daylight, twilight) => {
+        this.planet.setAtmosphereLighting(daylight, twilight);
+      },
+    });
 
     // ESC返回轨道
     window.addEventListener('keydown', this.onKeyDown);
@@ -180,22 +236,46 @@ export class App implements IDisposable {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === 'Tab' && !e.repeat) {
+      e.preventDefault();
+      this.achievementPanel.toggle();
+      return;
+    }
+
     if (e.code === 'KeyP' && !e.repeat) {
       this.togglePhotoMode();
+      return;
+    }
+
+    if (e.code === 'KeyT' && !e.repeat) {
+      this.dayNightCycle.cycleTimeScale();
       return;
     }
 
     if (this.photoModeActive) {
       return;
     }
-
+    if (e.code === 'KeyE' && !e.repeat) {
+      this.toggleScanner();
+      return;
+    }
+    if (e.code === 'KeyF' && !e.repeat) {
+      this.collectSample();
+      return;
+    }
     if (e.code === 'KeyM' && !e.repeat) {
       this.minimapFullscreen = !this.minimapFullscreen;
       this.minimap.setFullscreen(this.minimapFullscreen);
       return;
     }
-    if (e.key === 'Escape' && this.cameraManager.mode !== 'orbit') {
-      this.returnToOrbit();
+    if (e.key === 'Escape') {
+      if (this.achievementPanel.isOpen) {
+        this.achievementPanel.close();
+        return;
+      }
+      if (this.cameraManager.mode !== 'orbit') {
+        this.returnToOrbit();
+      }
     }
   };
 
@@ -314,10 +394,167 @@ export class App implements IDisposable {
     link.href = this.engine.renderer.domElement.toDataURL('image/png');
     link.download = `planet-walk-photo-${stamp}.png`;
     link.click();
+    this.achievementManager.recordEvent({
+      type: 'photo_taken',
+      planet: this.currentPlanet,
+    });
   };
 
   private pad2(value: number): string {
     return String(value).padStart(2, '0');
+  }
+
+  private toggleScanner(): void {
+    const next = !this.scanner.isActive;
+    this.scanner.setActive(next);
+    this.sciencePanel.setScannerActive(next);
+    this.sciencePanel.showActionMessage(
+      next ? '扫描仪已启动。' : '扫描仪已关闭。',
+      next,
+    );
+  }
+
+  private collectSample(): void {
+    if (!this.isInSurfaceMode()) {
+      this.sciencePanel.showActionMessage('请先降落到地表后再采集样本。');
+      return;
+    }
+
+    const result = this.sampleCollector.collect(this.playerController.state.position);
+    this.sciencePanel.showActionMessage(result.message, result.ok);
+    this.sciencePanel.setCollectionLog(this.sampleCollector.getInventory());
+    if (result.ok) {
+      this.collectCurrentSample();
+    }
+  }
+
+  private updateAchievementState(delta: number): void {
+    const inSurfaceMode = this.isInSurfaceMode();
+    if (inSurfaceMode && !this.wasInSurfaceMode) {
+      this.achievementManager.recordEvent({
+        type: 'planet_landed',
+        planet: this.currentPlanet,
+      });
+      this.lastPlayerPosition = this.playerController.state.position.clone();
+    }
+
+    if (inSurfaceMode) {
+      const playerPosition = this.playerController.state.position;
+      const playerGeo = cartesianToGeo(playerPosition, this.sceneManager.planetRadius);
+      this.achievementManager.recordEvent({
+        type: 'altitude_updated',
+        altitude: playerGeo.alt,
+      });
+
+      if (this.lastPlayerPosition) {
+        const step = playerPosition.distanceTo(this.lastPlayerPosition);
+        if (step > 1e-3) {
+          this.achievementManager.recordEvent({
+            type: 'distance_walked',
+            distance: step,
+          });
+        }
+        this.lastPlayerPosition.copy(playerPosition);
+      } else {
+        this.lastPlayerPosition = playerPosition.clone();
+      }
+
+      const movement = this.inputManager.getMovementAxis();
+      const moving =
+        Math.abs(movement.forward) > 1e-3 ||
+        Math.abs(movement.right) > 1e-3;
+      this.achievementManager.recordEvent({
+        type: 'walk_streak_tick',
+        moving,
+        delta,
+      });
+    } else {
+      this.lastPlayerPosition = null;
+      this.achievementManager.recordEvent({
+        type: 'walk_streak_tick',
+        moving: false,
+        delta,
+      });
+    }
+
+    this.wasInSurfaceMode = inSurfaceMode;
+
+    const weather = this.weatherSystem.weather;
+    if (weather) {
+      const weatherTag = `${this.currentPlanet}:${weather}`;
+      if (weatherTag !== this.lastWeatherTag) {
+        this.lastWeatherTag = weatherTag;
+        this.achievementManager.recordEvent({
+          type: 'weather_changed',
+          weather,
+        });
+      }
+    }
+  }
+
+  private scanCurrentLocation(): void {
+    if (!this.isInSurfaceMode()) {
+      return;
+    }
+    const playerPosition = this.playerController.state.position;
+    const playerGeo = cartesianToGeo(playerPosition, this.sceneManager.planetRadius);
+    const nearest = this.landmarkManager.getNearest(playerPosition);
+    const nearestThreshold = this.sceneManager.planetRadius * 0.08;
+    const roundedLat = (Math.round(playerGeo.lat * 2) / 2).toFixed(1);
+    const roundedLng = (Math.round(playerGeo.lng * 2) / 2).toFixed(1);
+    const siteId =
+      nearest && nearest.distance <= nearestThreshold
+        ? `${this.currentPlanet}:landmark:${this.normalizeSiteName(nearest.name)}`
+        : `${this.currentPlanet}:grid:${roundedLat}:${roundedLng}`;
+
+    this.achievementManager.recordEvent({
+      type: 'site_scanned',
+      siteId,
+    });
+
+    const hiddenPoiId = this.findNearbyHiddenPoi(playerGeo.lat, playerGeo.lng);
+    if (hiddenPoiId) {
+      this.achievementManager.recordEvent({
+        type: 'hidden_poi_found',
+        poiId: hiddenPoiId,
+      });
+    }
+  }
+
+  private collectCurrentSample(): void {
+    if (!this.isInSurfaceMode()) {
+      return;
+    }
+    const sampleType = PLANET_SAMPLE_TYPES[this.currentPlanet];
+    this.achievementManager.recordEvent({
+      type: 'sample_collected',
+      sampleType,
+    });
+  }
+
+  private normalizeSiteName(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  }
+
+  private findNearbyHiddenPoi(lat: number, lng: number): string | null {
+    const maxLatOffset = 3;
+    const maxLngOffset = 3;
+    for (const poi of HIDDEN_POIS) {
+      if (poi.planet !== this.currentPlanet) {
+        continue;
+      }
+      const latDelta = Math.abs(lat - poi.lat);
+      const lngDelta = this.getLongitudeDelta(lng, poi.lng);
+      if (latDelta <= maxLatOffset && lngDelta <= maxLngOffset) {
+        return poi.id;
+      }
+    }
+    return null;
+  }
+
+  private getLongitudeDelta(a: number, b: number): number {
+    const raw = Math.abs(a - b) % 360;
+    return raw > 180 ? 360 - raw : raw;
   }
 
   private computePlayerHeading(
@@ -431,15 +668,26 @@ export class App implements IDisposable {
       nextPlanet.config.radius,
       nextPlanet.config.weather,
     );
+    this.dayNightCycle.setPlanetRadius(nextPlanet.config.radius);
 
     // 更新粒子特效
     this.setupParticles(planetType, nextPlanet.config.radius);
 
     // 切换环境音
     this.audioManager.setPlanet(planetType);
+    this.scanner.switchPlanet({
+      planetType,
+      planetRadius: nextPlanet.config.radius,
+      surfaceMesh: nextPlanet.mesh,
+    });
+    this.sampleCollector.switchPlanet(planetType, nextPlanet.config.radius);
+    this.sciencePanel.updateNearbyTarget(null);
 
     this.currentPlanet = planetType;
     this.planetSelector.setActive(planetType);
+    this.lastWeatherTag = null;
+    this.lastPlayerPosition = null;
+    this.wasInSurfaceMode = false;
 
     // 切换星球后回到轨道模式（重置相机位置）
     this.returnToOrbit(true);
@@ -480,7 +728,10 @@ export class App implements IDisposable {
       }
 
       this.cameraManager.update(delta);
+      const cameraPosition = this.cameraSystem.camera.position;
+      this.dayNightCycle.update(delta, cameraPosition);
 
+      this.updateAchievementState(delta);
       const inSurfaceMode = this.isInSurfaceMode();
       this.minimap.setVisible(inSurfaceMode);
       if (inSurfaceMode) {
@@ -501,6 +752,15 @@ export class App implements IDisposable {
         );
       }
 
+      if (this.scanner.isActive) {
+        this.sciencePanel.updateScanData(this.scanner.scan(this.cameraSystem.camera));
+        this.scanCurrentLocation();
+      }
+      const nearbyTarget = inSurfaceMode
+        ? this.sampleCollector.getNearbyTarget(this.playerController.state.position)
+        : null;
+      this.sciencePanel.updateNearbyTarget(nearbyTarget);
+
       // 更新星球特效（云层/夜景/海洋）
       this.planet.update(delta);
 
@@ -508,19 +768,24 @@ export class App implements IDisposable {
       this.particleSystem?.update(delta);
 
       // 更新地标可见性
-      const cameraPosition = this.cameraSystem.camera.position;
       this.landmarkManager.update(cameraPosition);
 
       // 更新天气系统
       this.weatherSystem.update(delta, cameraPosition);
 
       const geo = cartesianToGeo(cameraPosition, this.sceneManager.planetRadius);
+      const playerGeo = cartesianToGeo(
+        this.playerController.state.position,
+        this.sceneManager.planetRadius,
+      );
       this.hud.update({
         planetName: this.sceneManager.planetName,
         lat: geo.lat,
         lng: geo.lng,
         alt: geo.alt,
         position: cameraPosition,
+        localTime: this.dayNightCycle.getLocalTimeString(playerGeo.lng),
+        timeScaleLabel: this.dayNightCycle.getTimeScaleLabel(),
       });
 
       this.performanceMonitor.update();
@@ -558,7 +823,15 @@ export class App implements IDisposable {
     this.guidePanel.dispose();
     this.landButton.dispose();
     this.minimap.dispose();
+    this.sciencePanel.dispose();
     this.weatherSystem.dispose();
+    for (const unsubscribe of this.achievementUnsubscribes) {
+      unsubscribe();
+    }
+    this.achievementUnsubscribes = [];
+    this.achievementPanel.dispose();
+    this.achievementToast.dispose();
+    this.achievementManager.dispose();
     this.sceneManager.dispose();
     this.engine.dispose();
   }
