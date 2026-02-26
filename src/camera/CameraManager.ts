@@ -87,15 +87,15 @@ export class CameraManager implements IUpdatable, IDisposable {
 
     this.applyOrbitDistanceLimits();
     window.addEventListener('keydown', this.onKeyDown);
-    this.switchTo('orbit');
+    this.switchTo('orbit', true);
   }
 
   get mode(): CameraMode {
     return this._mode;
   }
 
-  switchTo(mode: CameraMode): void {
-    if (this._mode === mode && !this._isTransitioning) {
+  switchTo(mode: CameraMode, force = false): void {
+    if (!force && this._mode === mode && !this._isTransitioning) {
       return;
     }
 

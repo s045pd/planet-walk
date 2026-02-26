@@ -91,6 +91,9 @@ export class App implements IDisposable {
   private readonly headingFallbackNorth = new THREE.Vector3(0, 0, 1);
 
   constructor(canvas: HTMLCanvasElement) {
+    canvas.style.pointerEvents = 'auto';
+    canvas.style.touchAction = 'none';
+
     this.engine = new Engine({
       canvas,
       antialias: true,

@@ -12,7 +12,7 @@ export class InfoCard {
       position: fixed; display: none; padding: 16px 20px;
       background: rgba(0,0,0,0.85); color: #fff; border-radius: 12px;
       border: 1px solid rgba(255,200,50,0.4); font-family: sans-serif;
-      pointer-events: auto; z-index: 100; min-width: 200px;
+      pointer-events: none; z-index: 100; min-width: 200px;
       backdrop-filter: blur(8px); transition: opacity 0.2s;
     `;
     document.body.appendChild(this.container);
