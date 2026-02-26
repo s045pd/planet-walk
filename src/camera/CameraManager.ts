@@ -43,6 +43,7 @@ export class CameraManager implements IUpdatable, IDisposable {
 
   private _mode: CameraMode = 'orbit';
   private _isTransitioning = false;
+  private _hotkeysEnabled = true;
 
   private readonly _firstPersonLookHandler = (dx: number, dy: number): void => {
     this._playerController.firstPerson.applyMouseDelta(dx, dy);
@@ -157,6 +158,10 @@ export class CameraManager implements IUpdatable, IDisposable {
     this.autoSwitchByAltitude();
   }
 
+  setHotkeysEnabled(enabled: boolean): void {
+    this._hotkeysEnabled = enabled;
+  }
+
   async animateToSurface(lat: number, lng: number, duration = 3000): Promise<void> {
     this.switchTo('orbit');
     this._isTransitioning = true;
@@ -195,6 +200,9 @@ export class CameraManager implements IUpdatable, IDisposable {
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
+    if (!this._hotkeysEnabled) {
+      return;
+    }
     if (event.code !== 'KeyV' || event.repeat || this._isTransitioning) {
       return;
     }

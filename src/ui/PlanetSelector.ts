@@ -11,6 +11,7 @@ export class PlanetSelector implements IDisposable {
   private readonly root: HTMLDivElement;
   private readonly buttons: Record<PlanetType, HTMLButtonElement>;
   private readonly onPlanetSelect: (planet: PlanetType) => void;
+  private visible = true;
 
   constructor(config: PlanetSelectorConfig) {
     this.onPlanetSelect = config.onPlanetSelect;
@@ -46,6 +47,14 @@ export class PlanetSelector implements IDisposable {
       button.style.color = isActive ? '#051224' : '#d9e8ff';
       button.style.borderColor = isActive ? '#a8d4ff' : 'rgba(155, 188, 255, 0.45)';
     });
+  }
+
+  setVisible(visible: boolean): void {
+    if (this.visible === visible) {
+      return;
+    }
+    this.visible = visible;
+    this.root.style.display = visible ? 'flex' : 'none';
   }
 
   dispose(): void {

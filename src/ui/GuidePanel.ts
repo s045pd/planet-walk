@@ -5,6 +5,7 @@ import type { IDisposable } from '../core/types';
  */
 export class GuidePanel implements IDisposable {
   private readonly root: HTMLDivElement;
+  private visible = true;
 
   constructor() {
     this.root = document.createElement('div');
@@ -42,6 +43,14 @@ export class GuidePanel implements IDisposable {
 
   fadeOut(): void {
     this.root.style.opacity = '0';
+  }
+
+  setVisible(visible: boolean): void {
+    if (this.visible === visible) {
+      return;
+    }
+    this.visible = visible;
+    this.root.style.display = visible ? 'block' : 'none';
   }
 
   dispose(): void {

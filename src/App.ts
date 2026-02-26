@@ -25,6 +25,10 @@ import { GuidePanel } from './ui/GuidePanel';
 import { LandButton } from './ui/LandButton';
 import { Minimap } from './ui/Minimap';
 import { WeatherSystem } from './weather/WeatherSystem';
+import { PhotoMode } from './camera/PhotoMode';
+import { PhotoModeUI } from './ui/PhotoModeUI';
+import { FilterManager } from './postprocess/FilterManager';
+import type { PhotoFilterType } from './postprocess/FilterManager';
 
 /** 主控制器：组装各子系统，驱动渲染循环 */
 export class App implements IDisposable {
@@ -46,6 +50,12 @@ export class App implements IDisposable {
   private landButton: LandButton;
   private minimap: Minimap;
   private weatherSystem: WeatherSystem;
+  private readonly photoMode: PhotoMode;
+  private readonly photoModeUI: PhotoModeUI;
+  private readonly filterManager: FilterManager;
+  private photoModeActive = false;
+  private photoModeHideHUD = true;
+  private pointerLockEnabledBeforePhoto = false;
   private minimapFullscreen = false;
   private clock = new THREE.Clock();
   private animationId = 0;
@@ -131,6 +141,28 @@ export class App implements IDisposable {
       weather: planet.config.weather,
     });
 
+    this.filterManager = new FilterManager({
+      renderer: this.engine.renderer,
+      scene: this.sceneManager.scene,
+      camera: this.cameraSystem.camera,
+    });
+    this.filterManager.resize(
+      window.innerWidth,
+      window.innerHeight,
+      Math.min(window.devicePixelRatio, 2),
+    );
+
+    this.photoMode = new PhotoMode({
+      camera: this.cameraSystem.camera,
+      input: this.inputManager,
+    });
+    this.photoModeUI = new PhotoModeUI({
+      onFilterChange: this.onPhotoFilterChange,
+      onCapture: this.captureScreenshot,
+      onHudToggle: this.onPhotoHUDToggle,
+      onFovChange: this.onPhotoFovChange,
+    });
+
     // ESC返回轨道
     window.addEventListener('keydown', this.onKeyDown);
 
@@ -140,9 +172,23 @@ export class App implements IDisposable {
   private onResize = (): void => {
     this.engine.resize();
     this.cameraSystem.resize();
+    this.filterManager.resize(
+      window.innerWidth,
+      window.innerHeight,
+      Math.min(window.devicePixelRatio, 2),
+    );
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === 'KeyP' && !e.repeat) {
+      this.togglePhotoMode();
+      return;
+    }
+
+    if (this.photoModeActive) {
+      return;
+    }
+
     if (e.code === 'KeyM' && !e.repeat) {
       this.minimapFullscreen = !this.minimapFullscreen;
       this.minimap.setFullscreen(this.minimapFullscreen);
@@ -152,6 +198,127 @@ export class App implements IDisposable {
       this.returnToOrbit();
     }
   };
+
+  private onPhotoFilterChange = (filter: PhotoFilterType): void => {
+    this.filterManager.setFilter(filter);
+  };
+
+  private onPhotoHUDToggle = (hidden: boolean): void => {
+    this.photoModeHideHUD = hidden;
+    if (this.photoModeActive) {
+      this.hud.setVisible(!hidden);
+    }
+  };
+
+  private onPhotoFovChange = (fov: number): void => {
+    if (this.photoModeActive) {
+      this.photoMode.setFov(fov);
+    }
+  };
+
+  private togglePhotoMode(): void {
+    if (this.photoModeActive) {
+      this.exitPhotoMode();
+      return;
+    }
+    this.enterPhotoMode();
+  }
+
+  private enterPhotoMode(): void {
+    if (this.photoModeActive) {
+      return;
+    }
+
+    this.photoModeActive = true;
+    this.photoModeHideHUD = true;
+    this.pointerLockEnabledBeforePhoto = this.inputManager.pointerLockEnabled;
+    this.cameraManager.setHotkeysEnabled(false);
+    if (this.cameraManager.mode === 'orbit') {
+      this.cameraManager.orbitMode.setEnabled(false);
+    }
+
+    this.photoMode.enter();
+    this.inputManager.setPointerLockEnabled(true);
+    if (!this.inputManager.isMobile) {
+      try {
+        this.engine.renderer.domElement.requestPointerLock();
+      } catch {
+        // 忽略浏览器在非激活状态下拒绝锁指针
+      }
+    }
+
+    this.filterManager.setFilter('normal');
+    this.setMainUIVisible(false);
+    this.photoModeUI.show({
+      filter: this.filterManager.filter,
+      hideHUD: this.photoModeHideHUD,
+      fov: this.photoMode.getFov(),
+    });
+  }
+
+  private exitPhotoMode(): void {
+    if (!this.photoModeActive) {
+      return;
+    }
+
+    this.photoMode.exit(true);
+    this.photoModeActive = false;
+    this.photoModeUI.hide();
+    this.filterManager.setFilter('normal');
+
+    this.cameraManager.setHotkeysEnabled(true);
+    if (this.cameraManager.mode === 'orbit') {
+      this.cameraManager.orbitMode.setEnabled(true);
+      this.cameraManager.orbitMode.syncFromCamera();
+    }
+    this.inputManager.setPointerLockEnabled(this.pointerLockEnabledBeforePhoto);
+
+    this.setMainUIVisible(true);
+  }
+
+  private setMainUIVisible(visible: boolean): void {
+    this.planetSelector.setVisible(visible);
+    this.debugPanel.setVisible(visible);
+    this.guidePanel.setVisible(visible);
+    this.hud.setVisible(visible);
+
+    if (visible) {
+      if (this.cameraManager.mode === 'orbit') {
+        this.landButton.show();
+      } else {
+        this.landButton.hide();
+      }
+      this.minimap.setVisible(this.isInSurfaceMode());
+      return;
+    }
+
+    this.landButton.hide();
+    this.minimap.setVisible(false);
+    const infoCard = document.getElementById('landmark-info-card');
+    if (infoCard instanceof HTMLDivElement) {
+      infoCard.style.display = 'none';
+    }
+  }
+
+  private isInSurfaceMode(): boolean {
+    return (
+      this.cameraManager.mode === 'firstPerson' ||
+      this.cameraManager.mode === 'thirdPerson'
+    );
+  }
+
+  private captureScreenshot = (): void => {
+    const now = new Date();
+    const stamp = `${now.getFullYear()}${this.pad2(now.getMonth() + 1)}${this.pad2(now.getDate())}-${this.pad2(now.getHours())}${this.pad2(now.getMinutes())}${this.pad2(now.getSeconds())}`;
+    const link = document.createElement('a');
+    link.href = this.engine.renderer.domElement.toDataURL('image/png');
+    link.download = `planet-walk-photo-${stamp}.png`;
+    link.click();
+  };
+
+  private pad2(value: number): string {
+    return String(value).padStart(2, '0');
+  }
 
   private computePlayerHeading(
     quaternion: THREE.Quaternion,
@@ -238,6 +405,9 @@ export class App implements IDisposable {
     if (planetType === this.currentPlanet) {
       return;
     }
+    if (this.photoModeActive) {
+      this.exitPhotoMode();
+    }
 
     const nextPlanet = PlanetFactory.create(planetType);
     this.sceneManager.replacePlanet(nextPlanet);
@@ -301,11 +471,17 @@ export class App implements IDisposable {
     const loop = (): void => {
       this.animationId = requestAnimationFrame(loop);
       const delta = this.clock.getDelta();
+
+      if (this.photoModeActive) {
+        this.photoMode.update(delta);
+        this.filterManager.update(delta);
+        this.filterManager.render(delta);
+        return;
+      }
+
       this.cameraManager.update(delta);
 
-      const inSurfaceMode =
-        this.cameraManager.mode === 'firstPerson' ||
-        this.cameraManager.mode === 'thirdPerson';
+      const inSurfaceMode = this.isInSurfaceMode();
       this.minimap.setVisible(inSurfaceMode);
       if (inSurfaceMode) {
         const playerState = this.playerController.state;
@@ -349,7 +525,8 @@ export class App implements IDisposable {
 
       this.performanceMonitor.update();
 
-      this.engine.render(this.sceneManager.scene, this.cameraSystem.camera);
+      this.filterManager.update(delta);
+      this.filterManager.render(delta);
 
       this.debugPanel.update({
         fps: this.performanceMonitor.getFPS(),
@@ -363,6 +540,11 @@ export class App implements IDisposable {
     cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKeyDown);
+    if (this.photoModeActive) {
+      this.exitPhotoMode();
+    }
+    this.photoModeUI.dispose();
+    this.filterManager.dispose();
     this.cameraManager.dispose();
     this.playerController.dispose();
     this.inputManager.dispose();

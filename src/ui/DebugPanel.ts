@@ -15,6 +15,7 @@ export class DebugPanel implements IDisposable {
   private fpsElement: HTMLDivElement;
   private nodesElement: HTMLDivElement;
   private memoryElement: HTMLDivElement;
+  private uiVisible = true;
 
   constructor() {
     this.container = document.createElement('div');
@@ -58,6 +59,14 @@ export class DebugPanel implements IDisposable {
     } else {
       this.memoryElement.textContent = 'Memory: N/A';
     }
+  }
+
+  setVisible(visible: boolean): void {
+    if (this.uiVisible === visible) {
+      return;
+    }
+    this.uiVisible = visible;
+    this.container.style.visibility = visible ? 'visible' : 'hidden';
   }
 
   dispose(): void {
