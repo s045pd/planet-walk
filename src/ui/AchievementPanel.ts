@@ -5,6 +5,7 @@ import {
 } from '../achievement/AchievementManager';
 import type { AchievementCategory } from '../achievement/AchievementData';
 import { getLocale, onLocaleChange, t } from '../i18n';
+import { StatsPanel } from './StatsPanel';
 
 const ICON_EMOJI: Record<string, string> = {
   planet: '🪐',
@@ -20,18 +21,27 @@ const ICON_EMOJI: Record<string, string> = {
   weather: '🌦️',
 };
 
+type PanelTab = 'achievements' | 'stats';
+
 export class AchievementPanel implements IDisposable {
   private readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
   private readonly content: HTMLDivElement;
+  private readonly achievementContent: HTMLDivElement;
   private readonly title: HTMLDivElement;
   private readonly subtitle: HTMLDivElement;
   private readonly closeButton: HTMLButtonElement;
+  private readonly achievementsTabButton: HTMLButtonElement;
+  private readonly statsTabButton: HTMLButtonElement;
   private readonly manager: AchievementManager;
+  private readonly statsPanel: StatsPanel;
   private readonly unsubscribe: () => void;
   private readonly unsubscribeLocaleChange: () => void;
+
   private visible = false;
   private closeTimer = 0;
+  private activeTab: PanelTab = 'achievements';
+  private latestStatuses: AchievementStatus[] = [];
 
   constructor(manager: AchievementManager) {
     this.manager = manager;
@@ -66,7 +76,7 @@ export class AchievementPanel implements IDisposable {
     this.panel.style.color = '#eaf4ff';
     this.panel.style.fontFamily = 'system-ui, -apple-system, sans-serif';
     this.panel.style.maxHeight = '100%';
-    this.panel.style.overflowY = 'auto';
+    this.panel.style.overflow = 'hidden';
 
     const header = document.createElement('div');
     header.style.padding = '18px 18px 12px 18px';
@@ -102,36 +112,66 @@ export class AchievementPanel implements IDisposable {
     this.closeButton.style.lineHeight = '1';
     this.closeButton.addEventListener('click', () => this.close());
 
-    this.applyStaticTexts();
-
     headerLeft.append(this.title, this.subtitle);
     header.append(headerLeft, this.closeButton);
 
+    const tabBar = document.createElement('div');
+    tabBar.style.display = 'flex';
+    tabBar.style.gap = '8px';
+    tabBar.style.padding = '10px 14px';
+    tabBar.style.borderBottom = '1px solid rgba(130, 177, 255, 0.2)';
+
+    this.achievementsTabButton = this.createTabButton(() => {
+      this.setActiveTab('achievements');
+    });
+    this.statsTabButton = this.createTabButton(() => {
+      this.setActiveTab('stats');
+    });
+
+    tabBar.append(this.achievementsTabButton, this.statsTabButton);
+
     this.content = document.createElement('div');
     this.content.style.flex = '1';
-    this.content.style.overflowY = 'auto';
-    this.content.style.padding = '12px 14px 20px 14px';
-    this.content.style.display = 'flex';
-    this.content.style.flexDirection = 'column';
-    this.content.style.gap = '12px';
+    this.content.style.overflow = 'hidden';
 
-    this.panel.append(header, this.content);
+    this.achievementContent = document.createElement('div');
+    this.achievementContent.style.height = '100%';
+    this.achievementContent.style.overflowY = 'auto';
+    this.achievementContent.style.padding = '12px 14px 20px 14px';
+    this.achievementContent.style.display = 'flex';
+    this.achievementContent.style.flexDirection = 'column';
+    this.achievementContent.style.gap = '12px';
+
+    this.statsPanel = new StatsPanel();
+    this.statsPanel.setVisible(false);
+
+    this.content.append(this.achievementContent, this.statsPanel.getElement());
+
+    this.panel.append(header, tabBar, this.content);
     this.root.appendChild(this.panel);
     document.body.appendChild(this.root);
     this.applyResponsiveLayout();
     window.addEventListener('resize', this.onResize);
 
     this.unsubscribe = this.manager.onChange((statuses) => {
-      if (this.visible) {
-        this.render(statuses);
+      this.latestStatuses = statuses;
+      const unlockedCount = statuses.filter((status) => status.unlocked).length;
+      this.statsPanel.setAchievementProgress(unlockedCount, statuses.length);
+
+      if (this.visible && this.activeTab === 'achievements') {
+        this.renderAchievements(statuses);
       }
     });
+
     this.unsubscribeLocaleChange = onLocaleChange(() => {
       this.applyStaticTexts();
-      if (this.visible) {
-        this.render(this.manager.getStatuses());
+      if (this.visible && this.activeTab === 'achievements') {
+        this.renderAchievements(this.latestStatuses);
       }
     });
+
+    this.applyStaticTexts();
+    this.updateTabUI();
   }
 
   get isOpen(): boolean {
@@ -151,7 +191,10 @@ export class AchievementPanel implements IDisposable {
       return;
     }
     this.visible = true;
-    this.render(this.manager.getStatuses());
+    if (this.activeTab === 'achievements') {
+      this.renderAchievements(this.latestStatuses.length > 0 ? this.latestStatuses : this.manager.getStatuses());
+    }
+    this.updateTabUI();
     this.root.style.display = 'block';
     this.panel.style.transform = 'translateX(100%)';
     requestAnimationFrame(() => {
@@ -164,6 +207,7 @@ export class AchievementPanel implements IDisposable {
       return;
     }
     this.visible = false;
+    this.statsPanel.setVisible(false);
     this.panel.style.transform = 'translateX(100%)';
     window.clearTimeout(this.closeTimer);
     this.closeTimer = window.setTimeout(() => {
@@ -173,16 +217,82 @@ export class AchievementPanel implements IDisposable {
     }, 240);
   }
 
+  addWalkDistance(distanceMeters: number): void {
+    this.statsPanel.addWalkDistance(distanceMeters);
+  }
+
+  addCollectedSamples(count = 1): void {
+    this.statsPanel.addCollectedSamples(count);
+  }
+
+  addPlayTime(deltaSeconds: number): void {
+    this.statsPanel.addPlayTime(deltaSeconds);
+  }
+
+  saveStats(force = false): void {
+    this.statsPanel.flush(force);
+  }
+
   dispose(): void {
     this.unsubscribe();
     this.unsubscribeLocaleChange();
     window.clearTimeout(this.closeTimer);
     window.removeEventListener('resize', this.onResize);
+    this.statsPanel.dispose();
     this.root.remove();
   }
 
-  private render(statuses: AchievementStatus[]): void {
-    this.content.innerHTML = '';
+  private createTabButton(onClick: () => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.style.flex = '1';
+    button.style.borderRadius = '8px';
+    button.style.padding = '8px 10px';
+    button.style.fontSize = 'clamp(12px, 3vw, 13px)';
+    button.style.fontWeight = '700';
+    button.style.cursor = 'pointer';
+    button.style.border = '1px solid rgba(141, 173, 222, 0.45)';
+    button.style.background = 'rgba(17, 27, 44, 0.55)';
+    button.style.color = '#d9e8ff';
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  private setActiveTab(tab: PanelTab): void {
+    if (this.activeTab === tab) {
+      return;
+    }
+    this.activeTab = tab;
+    this.updateTabUI();
+  }
+
+  private updateTabUI(): void {
+    const achievementActive = this.activeTab === 'achievements';
+    this.achievementContent.style.display = achievementActive ? 'flex' : 'none';
+    this.statsPanel.setVisible(this.visible && !achievementActive);
+
+    if (achievementActive && this.visible) {
+      this.renderAchievements(this.latestStatuses);
+    }
+
+    this.applyTabButtonStyle(this.achievementsTabButton, achievementActive);
+    this.applyTabButtonStyle(this.statsTabButton, !achievementActive);
+    this.achievementsTabButton.setAttribute('aria-pressed', String(achievementActive));
+    this.statsTabButton.setAttribute('aria-pressed', String(!achievementActive));
+  }
+
+  private applyTabButtonStyle(button: HTMLButtonElement, active: boolean): void {
+    button.style.background = active
+      ? 'rgba(122, 245, 183, 0.2)'
+      : 'rgba(17, 27, 44, 0.55)';
+    button.style.color = active ? '#e9fff5' : '#d9e8ff';
+    button.style.border = active
+      ? '1px solid rgba(122, 245, 183, 0.75)'
+      : '1px solid rgba(141, 173, 222, 0.45)';
+  }
+
+  private renderAchievements(statuses: AchievementStatus[]): void {
+    this.achievementContent.innerHTML = '';
     const categories: AchievementCategory[] = ['exploration', 'discovery', 'challenge'];
 
     for (const category of categories) {
@@ -208,7 +318,7 @@ export class AchievementPanel implements IDisposable {
         section.appendChild(this.createCard(status));
       }
 
-      this.content.appendChild(section);
+      this.achievementContent.appendChild(section);
     }
   }
 
@@ -343,5 +453,7 @@ export class AchievementPanel implements IDisposable {
     this.title.textContent = t('achievementPanel.title');
     this.subtitle.textContent = t('achievementPanel.subtitle');
     this.closeButton.setAttribute('aria-label', t('achievementPanel.closeAria'));
+    this.achievementsTabButton.textContent = t('achievementPanel.tab.achievements');
+    this.statsTabButton.textContent = t('achievementPanel.tab.stats');
   }
 }
