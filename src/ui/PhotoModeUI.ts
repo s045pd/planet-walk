@@ -46,16 +46,17 @@ export class PhotoModeUI implements IDisposable {
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
       width: min(360px, calc(100vw - 32px)); backdrop-filter: blur(8px);
       box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+      max-height: 80vh; overflow-y: auto;
       display: none;
     `;
 
     const title = document.createElement('div');
     title.textContent = '照片模式';
-    title.style.cssText = 'font-size:14px;font-weight:700;letter-spacing:0.4px;margin-bottom:10px;';
+    title.style.cssText = 'font-size:clamp(13px, 3.4vw, 14px);font-weight:700;letter-spacing:0.4px;margin-bottom:10px;';
 
     const filterLabel = document.createElement('div');
     filterLabel.textContent = '滤镜';
-    filterLabel.style.cssText = 'font-size:12px;opacity:0.85;margin-bottom:6px;';
+    filterLabel.style.cssText = 'font-size:clamp(11px, 3vw, 12px);opacity:0.85;margin-bottom:6px;';
 
     const filterPanel = document.createElement('div');
     filterPanel.style.cssText = `
@@ -73,7 +74,7 @@ export class PhotoModeUI implements IDisposable {
 
     const hudRow = document.createElement('label');
     hudRow.style.cssText =
-      'display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:12px;cursor:pointer;';
+      'display:flex;align-items:center;gap:8px;font-size:clamp(11px, 3vw, 12px);margin-bottom:12px;cursor:pointer;min-height:44px;';
     this.hudToggle = document.createElement('input');
     this.hudToggle.type = 'checkbox';
     this.hudToggle.addEventListener('change', () => {
@@ -85,7 +86,7 @@ export class PhotoModeUI implements IDisposable {
 
     const fovHeader = document.createElement('div');
     fovHeader.style.cssText =
-      'display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px;';
+      'display:flex;justify-content:space-between;align-items:center;font-size:clamp(11px, 3vw, 12px);margin-bottom:6px;';
     const fovLabel = document.createElement('span');
     fovLabel.textContent = 'FOV';
     this.fovValue = document.createElement('span');
@@ -98,7 +99,7 @@ export class PhotoModeUI implements IDisposable {
     this.fovSlider.min = '30';
     this.fovSlider.max = '110';
     this.fovSlider.step = '1';
-    this.fovSlider.style.cssText = 'width:100%;margin-bottom:12px;';
+    this.fovSlider.style.cssText = 'width:100%;margin-bottom:12px;min-height:44px;';
     this.fovSlider.addEventListener('input', () => {
       const fov = clamp(Number(this.fovSlider.value), 30, 110);
       this.fovValue.textContent = `${Math.round(fov)}°`;
@@ -106,13 +107,13 @@ export class PhotoModeUI implements IDisposable {
     });
 
     const actionRow = document.createElement('div');
-    actionRow.style.cssText = 'display:flex;gap:8px;align-items:center;';
+    actionRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
 
     const captureButton = document.createElement('button');
     captureButton.textContent = '拍照';
     captureButton.type = 'button';
     captureButton.style.cssText =
-      'padding:7px 12px;border-radius:8px;border:1px solid rgba(117,196,255,0.5);background:#2274d6;color:#fff;cursor:pointer;font-size:12px;font-weight:600;';
+      'padding:7px 12px;border-radius:8px;border:1px solid rgba(117,196,255,0.5);background:#2274d6;color:#fff;cursor:pointer;font-size:clamp(11px, 3vw, 12px);font-weight:600;min-height:44px;min-width:44px;';
     captureButton.addEventListener('click', () => {
       this.onCapture();
       this.showScreenshotToast();
@@ -120,7 +121,7 @@ export class PhotoModeUI implements IDisposable {
 
     const tip = document.createElement('span');
     tip.textContent = 'P 退出';
-    tip.style.cssText = 'font-size:11px;opacity:0.7;';
+    tip.style.cssText = 'font-size:clamp(10px, 2.8vw, 11px);opacity:0.7;';
 
     actionRow.append(captureButton, tip);
 
@@ -131,7 +132,7 @@ export class PhotoModeUI implements IDisposable {
       padding:6px 10px; border-radius:8px;
       border:1px solid rgba(149, 225, 186, 0.9);
       background:#0d2a1d; color:#ddffe9;
-      font-size:12px; font-weight:600;
+      font-size:clamp(11px, 3vw, 12px); font-weight:600;
       opacity:0; transform:translateY(6px);
       transition:opacity 160ms ease, transform 160ms ease;
       pointer-events:none;
@@ -139,6 +140,8 @@ export class PhotoModeUI implements IDisposable {
 
     this.root.append(title, filterLabel, filterPanel, hudRow, fovHeader, this.fovSlider, actionRow, this.screenshotToast);
     document.body.appendChild(this.root);
+    this.applyResponsiveLayout();
+    window.addEventListener('resize', this.onResize);
   }
 
   show(state: PhotoModeUIState): void {
@@ -183,6 +186,7 @@ export class PhotoModeUI implements IDisposable {
       window.clearTimeout(this.toastTimer);
       this.toastTimer = null;
     }
+    window.removeEventListener('resize', this.onResize);
     this.root.remove();
   }
 
@@ -195,7 +199,7 @@ export class PhotoModeUI implements IDisposable {
     button.type = 'button';
     button.textContent = label;
     button.style.cssText =
-      'padding:6px 10px;border-radius:7px;border:1px solid #6b89b4;background:#131d2c;color:#f6fbff;cursor:pointer;font-size:12px;font-weight:600;';
+      'padding:6px 10px;border-radius:7px;border:1px solid #6b89b4;background:#131d2c;color:#f6fbff;cursor:pointer;font-size:clamp(11px, 3vw, 12px);font-weight:600;min-height:44px;min-width:44px;';
     button.addEventListener('click', () => {
       this.setFilter(filter);
       this.onFilterChange(filter);
@@ -215,5 +219,27 @@ export class PhotoModeUI implements IDisposable {
       this.screenshotToast.style.transform = 'translateY(6px)';
       this.toastTimer = null;
     }, 2000);
+  }
+
+  private onResize = (): void => {
+    this.applyResponsiveLayout();
+  };
+
+  private applyResponsiveLayout(): void {
+    const compactViewport = window.innerWidth <= 480 || window.innerHeight <= 680;
+    if (compactViewport) {
+      this.root.style.left = '12px';
+      this.root.style.right = '12px';
+      this.root.style.bottom = '12px';
+      this.root.style.width = 'calc(100vw - 24px)';
+      this.root.style.padding = '12px';
+      return;
+    }
+
+    this.root.style.left = '16px';
+    this.root.style.right = 'auto';
+    this.root.style.bottom = '16px';
+    this.root.style.width = 'min(360px, calc(100vw - 32px))';
+    this.root.style.padding = '14px';
   }
 }

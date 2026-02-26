@@ -23,8 +23,13 @@ export class PlanetSelector implements IDisposable {
     this.root.style.top = '16px';
     this.root.style.right = '16px';
     this.root.style.display = 'flex';
+    this.root.style.flexWrap = 'wrap';
+    this.root.style.justifyContent = 'flex-end';
     this.root.style.gap = '8px';
     this.root.style.padding = '10px';
+    this.root.style.maxWidth = 'min(360px, calc(100vw - 32px))';
+    this.root.style.maxHeight = '80vh';
+    this.root.style.overflowY = 'auto';
     this.root.style.background = 'rgba(6, 12, 22, 0.65)';
     this.root.style.border = '1px solid rgba(155, 188, 255, 0.35)';
     this.root.style.borderRadius = '10px';
@@ -40,6 +45,8 @@ export class PlanetSelector implements IDisposable {
 
     this.root.append(this.buttons.earth, this.buttons.mars, this.buttons.moon);
     document.body.appendChild(this.root);
+    this.applyResponsiveLayout();
+    window.addEventListener('resize', this.onResize);
     this.setActive(config.initialPlanet);
   }
 
@@ -74,6 +81,7 @@ export class PlanetSelector implements IDisposable {
   }
 
   dispose(): void {
+    window.removeEventListener('resize', this.onResize);
     this.root.remove();
   }
 
@@ -82,9 +90,11 @@ export class PlanetSelector implements IDisposable {
     button.textContent = label;
     button.type = 'button';
     button.style.padding = '6px 10px';
+    button.style.minHeight = '44px';
+    button.style.minWidth = '44px';
     button.style.border = '1px solid rgba(155, 188, 255, 0.45)';
     button.style.borderRadius = '6px';
-    button.style.fontSize = '12px';
+    button.style.fontSize = 'clamp(11px, 2.9vw, 12px)';
     button.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif';
     button.style.cursor = 'pointer';
     button.style.transition = 'background-color 120ms ease, color 120ms ease, border-color 120ms ease';
@@ -96,6 +106,34 @@ export class PlanetSelector implements IDisposable {
       this.onPlanetSelect(planet);
     });
     return button;
+  }
+
+  private onResize = (): void => {
+    this.applyResponsiveLayout();
+  };
+
+  private applyResponsiveLayout(): void {
+    const compactViewport = window.innerWidth <= 480 || window.innerHeight <= 680;
+    if (compactViewport) {
+      this.root.style.top = '12px';
+      this.root.style.right = '12px';
+      this.root.style.left = '12px';
+      this.root.style.maxWidth = 'none';
+      this.root.style.width = 'calc(100vw - 24px)';
+      this.root.style.padding = '8px';
+      this.root.style.gap = '6px';
+      this.root.style.justifyContent = 'center';
+      return;
+    }
+
+    this.root.style.top = '16px';
+    this.root.style.right = '16px';
+    this.root.style.left = 'auto';
+    this.root.style.width = 'auto';
+    this.root.style.maxWidth = 'min(360px, calc(100vw - 32px))';
+    this.root.style.padding = '10px';
+    this.root.style.gap = '8px';
+    this.root.style.justifyContent = 'flex-end';
   }
 
 }

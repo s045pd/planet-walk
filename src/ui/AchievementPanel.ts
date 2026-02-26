@@ -66,6 +66,8 @@ export class AchievementPanel implements IDisposable {
     this.panel.style.flexDirection = 'column';
     this.panel.style.color = '#eaf4ff';
     this.panel.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+    this.panel.style.maxHeight = '100%';
+    this.panel.style.overflowY = 'auto';
 
     const header = document.createElement('div');
     header.style.padding = '18px 18px 12px 18px';
@@ -80,27 +82,27 @@ export class AchievementPanel implements IDisposable {
 
     const title = document.createElement('div');
     title.textContent = '成就';
-    title.style.fontSize = '22px';
+    title.style.fontSize = 'clamp(18px, 4.8vw, 22px)';
     title.style.fontWeight = '700';
 
     const subtitle = document.createElement('div');
     subtitle.textContent = 'Press Tab to close';
     subtitle.style.marginTop = '4px';
-    subtitle.style.fontSize = '12px';
+    subtitle.style.fontSize = 'clamp(11px, 2.8vw, 12px)';
     subtitle.style.opacity = '0.75';
 
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
     closeButton.textContent = '✕';
     closeButton.setAttribute('aria-label', 'Close achievement panel');
-    closeButton.style.width = '28px';
-    closeButton.style.height = '28px';
+    closeButton.style.width = '44px';
+    closeButton.style.height = '44px';
     closeButton.style.borderRadius = '8px';
     closeButton.style.border = '1px solid rgba(148, 196, 255, 0.55)';
     closeButton.style.background = 'rgba(10, 23, 42, 0.95)';
     closeButton.style.color = '#eef6ff';
     closeButton.style.cursor = 'pointer';
-    closeButton.style.fontSize = '14px';
+    closeButton.style.fontSize = 'clamp(13px, 3.4vw, 14px)';
     closeButton.style.lineHeight = '1';
     closeButton.addEventListener('click', () => this.close());
 
@@ -118,6 +120,8 @@ export class AchievementPanel implements IDisposable {
     this.panel.append(header, this.content);
     this.root.appendChild(this.panel);
     document.body.appendChild(this.root);
+    this.applyResponsiveLayout();
+    window.addEventListener('resize', this.onResize);
 
     this.unsubscribe = this.manager.onChange((statuses) => {
       if (this.visible) {
@@ -168,6 +172,7 @@ export class AchievementPanel implements IDisposable {
   dispose(): void {
     this.unsubscribe();
     window.clearTimeout(this.closeTimer);
+    window.removeEventListener('resize', this.onResize);
     this.root.remove();
   }
 
@@ -188,7 +193,7 @@ export class AchievementPanel implements IDisposable {
 
       const heading = document.createElement('div');
       heading.textContent = CATEGORY_LABELS[category];
-      heading.style.fontSize = '13px';
+      heading.style.fontSize = 'clamp(12px, 3vw, 13px)';
       heading.style.fontWeight = '700';
       heading.style.color = '#b5d8ff';
       heading.style.padding = '6px 4px';
@@ -241,14 +246,14 @@ export class AchievementPanel implements IDisposable {
 
     const name = document.createElement('div');
     name.textContent = status.definition.name;
-    name.style.fontSize = '14px';
+    name.style.fontSize = 'clamp(13px, 3.3vw, 14px)';
     name.style.fontWeight = '700';
 
     left.append(icon, name);
 
     const badge = document.createElement('span');
     badge.textContent = status.unlocked ? '已解锁' : '未解锁';
-    badge.style.fontSize = '11px';
+    badge.style.fontSize = 'clamp(10px, 2.6vw, 11px)';
     badge.style.padding = '2px 7px';
     badge.style.borderRadius = '999px';
     badge.style.color = status.unlocked ? '#072114' : '#d9e8ff';
@@ -263,7 +268,7 @@ export class AchievementPanel implements IDisposable {
 
     const desc = document.createElement('div');
     desc.textContent = status.definition.description;
-    desc.style.fontSize = '12px';
+    desc.style.fontSize = 'clamp(11px, 3vw, 12px)';
     desc.style.opacity = '0.9';
 
     const progressTrack = document.createElement('div');
@@ -282,7 +287,7 @@ export class AchievementPanel implements IDisposable {
 
     const progressText = document.createElement('div');
     progressText.textContent = status.progress.text;
-    progressText.style.fontSize = '11px';
+    progressText.style.fontSize = 'clamp(10px, 2.6vw, 11px)';
     progressText.style.opacity = '0.82';
 
     card.append(row, desc, progressTrack, progressText);
@@ -290,11 +295,38 @@ export class AchievementPanel implements IDisposable {
     if (status.unlockedAt) {
       const unlockedAt = document.createElement('div');
       unlockedAt.textContent = `解锁时间: ${new Date(status.unlockedAt).toLocaleString()}`;
-      unlockedAt.style.fontSize = '11px';
+      unlockedAt.style.fontSize = 'clamp(10px, 2.6vw, 11px)';
       unlockedAt.style.opacity = '0.72';
       card.appendChild(unlockedAt);
     }
 
     return card;
+  }
+
+  private onResize = (): void => {
+    this.applyResponsiveLayout();
+  };
+
+  private applyResponsiveLayout(): void {
+    const compactViewport = window.innerWidth <= 600 || window.innerHeight <= 700;
+    if (compactViewport) {
+      this.panel.style.top = 'max(8px, env(safe-area-inset-top))';
+      this.panel.style.right = '8px';
+      this.panel.style.height = 'auto';
+      this.panel.style.maxHeight = '80vh';
+      this.panel.style.width = 'min(460px, calc(100vw - 16px))';
+      this.panel.style.borderRadius = '12px';
+      this.panel.style.border = '1px solid rgba(157, 201, 255, 0.4)';
+      return;
+    }
+
+    this.panel.style.top = '0';
+    this.panel.style.right = '0';
+    this.panel.style.height = '100%';
+    this.panel.style.maxHeight = '100%';
+    this.panel.style.width = 'min(460px, 92vw)';
+    this.panel.style.borderRadius = '0';
+    this.panel.style.border = 'none';
+    this.panel.style.borderLeft = '1px solid rgba(157, 201, 255, 0.4)';
   }
 }

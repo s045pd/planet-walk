@@ -27,20 +27,22 @@ export class HelpOverlay implements IDisposable {
       background: rgba(8, 16, 30, 0.96);
       color: #eaf3ff;
       padding: 16px;
+      max-height: 80vh;
+      overflow-y: auto;
       font-family: ui-sans-serif, system-ui, sans-serif;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
     `;
 
     const title = document.createElement('div');
     title.textContent = 'Keyboard Shortcuts';
-    title.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:4px;';
+    title.style.cssText = 'font-size:clamp(16px, 4.2vw, 18px);font-weight:700;margin-bottom:4px;';
 
     const subtitle = document.createElement('div');
     subtitle.textContent = 'Press H or Esc to close';
-    subtitle.style.cssText = 'font-size:12px;opacity:0.8;margin-bottom:12px;';
+    subtitle.style.cssText = 'font-size:clamp(11px, 3vw, 12px);opacity:0.8;margin-bottom:12px;';
 
     const list = document.createElement('div');
-    list.style.cssText = 'display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.5;';
+    list.style.cssText = 'display:flex;flex-direction:column;gap:6px;font-size:clamp(12px, 3.2vw, 13px);line-height:1.5;';
 
     const shortcuts: Array<[string, string]> = [
       ['H', 'Toggle this help overlay'],
@@ -60,14 +62,14 @@ export class HelpOverlay implements IDisposable {
     for (const [key, desc] of shortcuts) {
       const row = document.createElement('div');
       row.style.display = 'grid';
-      row.style.gridTemplateColumns = '130px 1fr';
+      row.style.gridTemplateColumns = 'minmax(110px, 130px) minmax(0, 1fr)';
       row.style.gap = '8px';
 
       const keyLabel = document.createElement('span');
       keyLabel.textContent = key;
       keyLabel.style.cssText = `
         display:inline-flex;align-items:center;justify-content:center;
-        min-height:24px;padding:0 8px;
+        min-height:44px;padding:0 8px;
         border-radius:6px;border:1px solid rgba(145, 196, 255, 0.45);
         background: rgba(20, 34, 55, 0.9);
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -84,6 +86,8 @@ export class HelpOverlay implements IDisposable {
     this.panel.append(title, subtitle, list);
     this.root.appendChild(this.panel);
     document.body.appendChild(this.root);
+    this.applyResponsiveLayout();
+    window.addEventListener('resize', this.onResize);
   }
 
   get isOpen(): boolean {
@@ -115,6 +119,25 @@ export class HelpOverlay implements IDisposable {
   }
 
   dispose(): void {
+    window.removeEventListener('resize', this.onResize);
     this.root.remove();
+  }
+
+  private onResize = (): void => {
+    this.applyResponsiveLayout();
+  };
+
+  private applyResponsiveLayout(): void {
+    const compactViewport = window.innerWidth <= 480 || window.innerHeight <= 680;
+    if (compactViewport) {
+      this.root.style.padding = '12px';
+      this.panel.style.width = 'calc(100vw - 24px)';
+      this.panel.style.padding = '12px';
+      return;
+    }
+
+    this.root.style.padding = '20px';
+    this.panel.style.width = 'min(560px, calc(100vw - 24px))';
+    this.panel.style.padding = '16px';
   }
 }

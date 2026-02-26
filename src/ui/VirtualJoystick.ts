@@ -20,6 +20,7 @@ export class VirtualJoystick implements IDisposable {
   private readonly leftBase: HTMLDivElement | null;
   private readonly leftKnob: HTMLDivElement | null;
   private readonly rightPad: HTMLDivElement | null;
+  private readonly rightHint: HTMLDivElement | null;
 
   private active = false;
 
@@ -41,6 +42,7 @@ export class VirtualJoystick implements IDisposable {
       this.leftBase = null;
       this.leftKnob = null;
       this.rightPad = null;
+      this.rightHint = null;
       return;
     }
 
@@ -53,14 +55,10 @@ export class VirtualJoystick implements IDisposable {
 
     this.leftPad = document.createElement('div');
     this.leftPad.style.position = 'absolute';
-    this.leftPad.style.left = '20px';
-    this.leftPad.style.bottom = '22px';
-    this.leftPad.style.width = '42vw';
-    this.leftPad.style.height = '42vw';
-    this.leftPad.style.maxWidth = '190px';
-    this.leftPad.style.maxHeight = '190px';
-    this.leftPad.style.minWidth = '128px';
-    this.leftPad.style.minHeight = '128px';
+    this.leftPad.style.left = 'clamp(12px, 3vw, 20px)';
+    this.leftPad.style.bottom = 'clamp(12px, 3.5vh, 22px)';
+    this.leftPad.style.width = 'clamp(104px, 34vw, 190px)';
+    this.leftPad.style.height = 'clamp(104px, 34vw, 190px)';
     this.leftPad.style.display = 'flex';
     this.leftPad.style.alignItems = 'center';
     this.leftPad.style.justifyContent = 'center';
@@ -83,6 +81,8 @@ export class VirtualJoystick implements IDisposable {
     this.leftKnob.style.top = '50%';
     this.leftKnob.style.width = '42%';
     this.leftKnob.style.height = '42%';
+    this.leftKnob.style.minWidth = '44px';
+    this.leftKnob.style.minHeight = '44px';
     this.leftKnob.style.borderRadius = '999px';
     this.leftKnob.style.border = '2px solid rgba(220, 242, 255, 0.7)';
     this.leftKnob.style.background =
@@ -94,7 +94,7 @@ export class VirtualJoystick implements IDisposable {
     this.rightPad.style.position = 'absolute';
     this.rightPad.style.top = '0';
     this.rightPad.style.right = '0';
-    this.rightPad.style.width = '50vw';
+    this.rightPad.style.width = 'clamp(170px, 52vw, 680px)';
     this.rightPad.style.height = '100%';
     this.rightPad.style.pointerEvents = 'auto';
     this.rightPad.style.touchAction = 'none';
@@ -102,20 +102,20 @@ export class VirtualJoystick implements IDisposable {
       'linear-gradient(90deg, rgba(15, 25, 40, 0), rgba(95, 165, 235, 0.08) 42%, rgba(125, 190, 245, 0.15) 100%)';
     this.rightPad.style.borderLeft = '1px solid rgba(145, 198, 255, 0.2)';
 
-    const rightHint = document.createElement('div');
-    rightHint.style.position = 'absolute';
-    rightHint.style.right = '22px';
-    rightHint.style.bottom = '30px';
-    rightHint.style.width = '60px';
-    rightHint.style.height = '60px';
-    rightHint.style.borderRadius = '999px';
-    rightHint.style.border = '1px dashed rgba(170, 214, 255, 0.36)';
-    rightHint.style.background = 'rgba(95, 158, 230, 0.1)';
-    rightHint.style.pointerEvents = 'none';
+    this.rightHint = document.createElement('div');
+    this.rightHint.style.position = 'absolute';
+    this.rightHint.style.right = 'clamp(12px, 3vw, 22px)';
+    this.rightHint.style.bottom = 'clamp(12px, 4vh, 30px)';
+    this.rightHint.style.width = 'clamp(44px, 11vw, 60px)';
+    this.rightHint.style.height = 'clamp(44px, 11vw, 60px)';
+    this.rightHint.style.borderRadius = '999px';
+    this.rightHint.style.border = '1px dashed rgba(170, 214, 255, 0.36)';
+    this.rightHint.style.background = 'rgba(95, 158, 230, 0.1)';
+    this.rightHint.style.pointerEvents = 'none';
 
     this.leftBase.appendChild(this.leftKnob);
     this.leftPad.appendChild(this.leftBase);
-    this.root.append(this.leftPad, this.rightPad, rightHint);
+    this.root.append(this.leftPad, this.rightPad, this.rightHint);
     document.body.appendChild(this.root);
 
     this.leftPad.addEventListener('touchstart', this.onLeftTouchStart, { passive: false });
@@ -161,6 +161,7 @@ export class VirtualJoystick implements IDisposable {
   }
 
   private onResize = (): void => {
+    this.applyResponsiveLayout();
     if (!this.leftBase) {
       return;
     }
@@ -169,6 +170,35 @@ export class VirtualJoystick implements IDisposable {
     this.leftCenter.y = rect.top + rect.height * 0.5;
     this.leftRadius = Math.max(24, rect.width * 0.36);
   };
+
+  private applyResponsiveLayout(): void {
+    if (!this.leftPad || !this.rightPad || !this.rightHint) {
+      return;
+    }
+    const compactViewport = window.innerWidth <= 420 || window.innerHeight <= 680;
+    if (compactViewport) {
+      this.leftPad.style.left = 'max(8px, env(safe-area-inset-left))';
+      this.leftPad.style.bottom = 'max(8px, env(safe-area-inset-bottom))';
+      this.leftPad.style.width = 'clamp(96px, 31vw, 148px)';
+      this.leftPad.style.height = 'clamp(96px, 31vw, 148px)';
+      this.rightPad.style.width = '56vw';
+      this.rightHint.style.right = 'max(8px, env(safe-area-inset-right))';
+      this.rightHint.style.bottom = 'max(8px, env(safe-area-inset-bottom))';
+      this.rightHint.style.width = 'clamp(44px, 10vw, 50px)';
+      this.rightHint.style.height = 'clamp(44px, 10vw, 50px)';
+      return;
+    }
+
+    this.leftPad.style.left = 'clamp(12px, 3vw, 20px)';
+    this.leftPad.style.bottom = 'clamp(12px, 3.5vh, 22px)';
+    this.leftPad.style.width = 'clamp(104px, 34vw, 190px)';
+    this.leftPad.style.height = 'clamp(104px, 34vw, 190px)';
+    this.rightPad.style.width = 'clamp(170px, 52vw, 680px)';
+    this.rightHint.style.right = 'clamp(12px, 3vw, 22px)';
+    this.rightHint.style.bottom = 'clamp(12px, 4vh, 30px)';
+    this.rightHint.style.width = 'clamp(44px, 11vw, 60px)';
+    this.rightHint.style.height = 'clamp(44px, 11vw, 60px)';
+  }
 
   private onLeftTouchStart = (event: TouchEvent): void => {
     if (!this.active || this.leftTouchId !== null) {

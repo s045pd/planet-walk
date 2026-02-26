@@ -29,12 +29,16 @@ export class HUD implements IDisposable {
     this.root.style.border = '1px solid rgba(155, 188, 255, 0.35)';
     this.root.style.borderRadius = '8px';
     this.root.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace';
-    this.root.style.fontSize = '12px';
+    this.root.style.fontSize = 'clamp(11px, 2.6vw, 12px)';
     this.root.style.lineHeight = '1.5';
     this.root.style.color = '#e7f1ff';
     this.root.style.pointerEvents = 'none';
     this.root.style.userSelect = 'none';
-    this.root.style.minWidth = '250px';
+    this.root.style.minWidth = 'min(250px, calc(100vw - 32px))';
+    this.root.style.maxWidth = 'min(360px, calc(100vw - 32px))';
+    this.root.style.maxHeight = '80vh';
+    this.root.style.overflowY = 'auto';
+    this.root.style.wordBreak = 'break-word';
     this.root.style.backdropFilter = 'blur(4px)';
     this.root.style.zIndex = '10';
 
@@ -44,6 +48,8 @@ export class HUD implements IDisposable {
 
     this.root.append(this.planetLine, this.geoLine, this.timeLine);
     document.body.appendChild(this.root);
+    this.applyResponsiveLayout();
+    window.addEventListener('resize', this.onResize);
   }
 
   update(data: HUDData): void {
@@ -64,6 +70,35 @@ export class HUD implements IDisposable {
   }
 
   dispose(): void {
+    window.removeEventListener('resize', this.onResize);
     this.root.remove();
+  }
+
+  private onResize = (): void => {
+    this.applyResponsiveLayout();
+  };
+
+  private applyResponsiveLayout(): void {
+    const compactViewport = window.innerWidth <= 480 || window.innerHeight <= 680;
+    if (compactViewport) {
+      this.root.style.top = '76px';
+      this.root.style.left = '12px';
+      this.root.style.right = '12px';
+      this.root.style.minWidth = '0';
+      this.root.style.maxWidth = 'none';
+      this.root.style.width = 'calc(100vw - 24px)';
+      this.root.style.padding = '8px 10px';
+      this.root.style.fontSize = 'clamp(10px, 3.1vw, 11px)';
+      return;
+    }
+
+    this.root.style.top = '16px';
+    this.root.style.left = '16px';
+    this.root.style.right = 'auto';
+    this.root.style.width = 'auto';
+    this.root.style.padding = '10px 12px';
+    this.root.style.fontSize = 'clamp(11px, 2.6vw, 12px)';
+    this.root.style.minWidth = 'min(250px, calc(100vw - 32px))';
+    this.root.style.maxWidth = 'min(360px, calc(100vw - 32px))';
   }
 }

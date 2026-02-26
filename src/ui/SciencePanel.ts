@@ -17,8 +17,9 @@ export class SciencePanel implements IDisposable {
     this.root = document.createElement('div');
     this.root.style.cssText = `
       position: fixed; right: 16px; bottom: 260px; z-index: 60;
-      display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+      display: flex; flex-direction: column; gap: 10px; pointer-events: auto;
       width: min(360px, calc(100vw - 32px));
+      max-height: 80vh; overflow-y: auto; touch-action: pan-y;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     `;
 
@@ -31,19 +32,19 @@ export class SciencePanel implements IDisposable {
 
     const scanTitle = document.createElement('div');
     scanTitle.textContent = '科学扫描仪';
-    scanTitle.style.cssText = 'font-size:13px; font-weight:700; margin-bottom:8px; color:#8fd7ff;';
+    scanTitle.style.cssText = 'font-size:clamp(12px, 3.2vw, 13px); font-weight:700; margin-bottom:8px; color:#8fd7ff;';
 
     this.scanStatus = document.createElement('div');
-    this.scanStatus.style.cssText = 'font-size:12px; opacity:0.9; margin-bottom:6px;';
+    this.scanStatus.style.cssText = 'font-size:clamp(11px, 3vw, 12px); opacity:0.9; margin-bottom:6px;';
     this.scanStatus.textContent = '状态: 待机 (E)';
 
     this.scanBody = document.createElement('div');
-    this.scanBody.style.cssText = 'font-size:12px; line-height:1.7; color:#c7e6ff;';
+    this.scanBody.style.cssText = 'font-size:clamp(11px, 3vw, 12px); line-height:1.7; color:#c7e6ff;';
     this.scanBody.textContent = '按 E 激活扫描仪并对准地面。';
 
     this.collectHint = document.createElement('div');
     this.collectHint.style.cssText = `
-      font-size:12px; margin-top:8px; padding-top:8px;
+      font-size:clamp(11px, 3vw, 12px); margin-top:8px; padding-top:8px;
       border-top: 1px solid rgba(126, 179, 216, 0.25); color:#ffe5a3;
       min-height: 20px;
     `;
@@ -60,11 +61,11 @@ export class SciencePanel implements IDisposable {
 
     const logTitle = document.createElement('div');
     logTitle.textContent = '采集日志';
-    logTitle.style.cssText = 'font-size:13px; font-weight:700; margin-bottom:8px; color:#ffd47f;';
+    logTitle.style.cssText = 'font-size:clamp(12px, 3.2vw, 13px); font-weight:700; margin-bottom:8px; color:#ffd47f;';
 
     this.logList = document.createElement('div');
     this.logList.style.cssText = `
-      overflow: auto; font-size:12px; line-height:1.6;
+      overflow: auto; font-size:clamp(11px, 3vw, 12px); line-height:1.6;
       display: flex; flex-direction: column; gap: 6px; padding-right: 2px;
     `;
     this.logList.textContent = '暂无样本记录。';
@@ -73,12 +74,14 @@ export class SciencePanel implements IDisposable {
 
     this.actionMessage = document.createElement('div');
     this.actionMessage.style.cssText = `
-      min-height: 18px; font-size:12px; color:#b4ffd8; text-shadow: 0 0 8px rgba(0,0,0,0.5);
+      min-height: 18px; font-size:clamp(11px, 3vw, 12px); color:#b4ffd8; text-shadow: 0 0 8px rgba(0,0,0,0.5);
       padding-left: 4px;
     `;
 
     this.root.append(this.scanCard, this.logCard, this.actionMessage);
     document.body.appendChild(this.root);
+    this.applyResponsiveLayout();
+    window.addEventListener('resize', this.onResize);
   }
 
   setScannerActive(active: boolean): void {
@@ -153,6 +156,27 @@ export class SciencePanel implements IDisposable {
     if (this.messageTimer !== null) {
       window.clearTimeout(this.messageTimer);
     }
+    window.removeEventListener('resize', this.onResize);
     this.root.remove();
+  }
+
+  private onResize = (): void => {
+    this.applyResponsiveLayout();
+  };
+
+  private applyResponsiveLayout(): void {
+    const compactViewport = window.innerWidth <= 880 || window.innerHeight <= 680;
+    if (compactViewport) {
+      this.root.style.right = '12px';
+      this.root.style.left = '12px';
+      this.root.style.bottom = '12px';
+      this.root.style.width = 'calc(100vw - 24px)';
+      return;
+    }
+
+    this.root.style.right = '16px';
+    this.root.style.left = 'auto';
+    this.root.style.bottom = '260px';
+    this.root.style.width = 'min(360px, calc(100vw - 32px))';
   }
 }
