@@ -31,9 +31,10 @@ export class FirstPersonMode implements IDisposable {
   }
 
   /** 应用鼠标增量旋转视角 */
-  applyMouseDelta(dx: number, dy: number): void {
-    this._yaw -= dx * this.sensitivity;
-    this._pitch -= dy * this.sensitivity;
+  applyMouseDelta(dx: number, dy: number, sensitivityMultiplier = 1): void {
+    const sensitivity = this.sensitivity * sensitivityMultiplier;
+    this._yaw -= dx * sensitivity;
+    this._pitch -= dy * sensitivity;
     this._pitch = clamp(this._pitch, -Math.PI * 0.47, Math.PI * 0.47);
   }
 

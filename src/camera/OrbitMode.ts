@@ -44,7 +44,7 @@ export class OrbitMode implements IUpdatable, IDisposable {
   constructor(config: OrbitModeConfig) {
     this.camera = config.camera;
     this.domElement = config.domElement;
-    this.rotateSpeed = config.rotateSpeed ?? 0.005;
+    this.rotateSpeed = (config.rotateSpeed ?? 0.005) * 3;
     this.zoomSpeed = config.zoomSpeed ?? 0.0018;
     this.damping = config.damping ?? 10;
     this.minDistance = config.minDistance ?? 10;

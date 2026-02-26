@@ -5,6 +5,8 @@ import { PlayerState } from './PlayerState';
 import { SphericalGravity } from './SphericalGravity';
 import { FirstPersonMode } from '../camera/FirstPersonMode';
 
+const BASE_SPEED = 10;
+
 type TextureImageSource = CanvasImageSource & {
   width?: number;
   height?: number;
@@ -85,7 +87,7 @@ export class PlayerController implements IUpdatable, IDisposable {
     this.input = config.input;
     this.planetCenter = config.planetCenter.clone();
     this.surfaceMeshes = config.surfaceMeshes;
-    this.moveSpeed = config.moveSpeed ?? 5;
+    this.moveSpeed = config.moveSpeed ?? BASE_SPEED;
     this.jumpForce = config.jumpForce ?? 4;
 
     // 初始位置：星球表面正上方

@@ -31,6 +31,7 @@ export class CameraManager implements IUpdatable, IDisposable {
   readonly transitionController: TransitionController;
   readonly astronautModel: AstronautModel;
 
+  private readonly _domElement: HTMLCanvasElement;
   private readonly _input: InputManager;
   private readonly _playerController: PlayerController;
   private readonly _getPlanetRadius: () => number;
@@ -44,9 +45,16 @@ export class CameraManager implements IUpdatable, IDisposable {
   private _mode: CameraMode = 'orbit';
   private _isTransitioning = false;
   private _hotkeysEnabled = true;
+  private _pointerLockRetryTimer: number | null = null;
+  private _pointerLockRetryCount = 0;
+
+  private readonly _pointerLockRetryAttempts = 3;
+  private readonly _pointerLockRetryDelayMs = 500;
+  private readonly _fallbackLookTitle = 'Pointer lock unavailable. Hold left mouse and drag to look.';
 
   private readonly _firstPersonLookHandler = (dx: number, dy: number): void => {
-    this._playerController.firstPerson.applyMouseDelta(dx, dy);
+    const sensitivityMultiplier = this._input.pointerLocked ? 1 : 4;
+    this._playerController.firstPerson.applyMouseDelta(dx, dy, sensitivityMultiplier);
   };
 
   private readonly _thirdPersonLookHandler = (dx: number, dy: number): void => {
@@ -55,6 +63,7 @@ export class CameraManager implements IUpdatable, IDisposable {
 
   constructor(config: CameraManagerConfig) {
     this.camera = config.camera;
+    this._domElement = config.domElement;
     this._input = config.input;
     this._playerController = config.playerController;
     this._getPlanetRadius = config.getPlanetRadius;
@@ -101,6 +110,7 @@ export class CameraManager implements IUpdatable, IDisposable {
 
     if (mode === 'orbit') {
       this._mode = 'orbit';
+      this.clearPointerLockRetry();
       this._playerController.setMouseLookHandler(null);
       this._playerController.setCameraSyncEnabled(false);
       this._playerController.setEnabled(false);
@@ -108,6 +118,7 @@ export class CameraManager implements IUpdatable, IDisposable {
       this.astronautModel.setVisible(false);
       this.orbitMode.syncFromCamera();
       this.orbitMode.setEnabled(true);
+      this.updateFallbackLookIndicator();
       return;
     }
 
@@ -119,25 +130,28 @@ export class CameraManager implements IUpdatable, IDisposable {
     this.orbitMode.setEnabled(false);
     this._playerController.setEnabled(true);
     this._input.setPointerLockEnabled(true);
-    this._input.tryRequestPointerLock();
+    this.requestPointerLockWithRetry();
 
     if (mode === 'thirdPerson') {
       this._playerController.setMouseLookHandler(this._thirdPersonLookHandler);
       this._playerController.setCameraSyncEnabled(false);
       this.astronautModel.setVisible(true);
       this.thirdPersonMode.update(this._playerController.state);
+      this.updateFallbackLookIndicator();
       return;
     }
 
     this._playerController.setMouseLookHandler(this._firstPersonLookHandler);
     this._playerController.setCameraSyncEnabled(true);
     this.astronautModel.setVisible(false);
+    this.updateFallbackLookIndicator();
   }
 
   update(delta: number): void {
     this.applyOrbitDistanceLimits();
     const wheelDelta = this._input.consumeWheel();
     if (this._isTransitioning) {
+      this.updateFallbackLookIndicator();
       return;
     }
 
@@ -157,6 +171,7 @@ export class CameraManager implements IUpdatable, IDisposable {
     }
 
     this.autoSwitchByAltitude();
+    this.updateFallbackLookIndicator();
   }
 
   setHotkeysEnabled(enabled: boolean): void {
@@ -166,8 +181,10 @@ export class CameraManager implements IUpdatable, IDisposable {
   async animateToSurface(lat: number, lng: number, duration = 3000): Promise<void> {
     this.switchTo('orbit');
     this._isTransitioning = true;
+    this.clearPointerLockRetry();
     this._input.setPointerLockEnabled(false);
     this.orbitMode.setEnabled(false);
+    this.updateFallbackLookIndicator();
 
     try {
       await this.transitionController.animateToSurface(lat, lng, duration);
@@ -216,12 +233,68 @@ export class CameraManager implements IUpdatable, IDisposable {
     }
   };
 
+  private requestPointerLockWithRetry(): void {
+    this.clearPointerLockRetry();
+    this.tryRequestPointerLock();
+  }
+
+  private tryRequestPointerLock(): void {
+    if (this._mode === 'orbit') {
+      this.updateFallbackLookIndicator();
+      return;
+    }
+    if (!this._input.pointerLockEnabled || this._input.isMobile) {
+      this.updateFallbackLookIndicator();
+      return;
+    }
+    if (this._input.pointerLocked) {
+      this._pointerLockRetryCount = 0;
+      this.updateFallbackLookIndicator();
+      return;
+    }
+
+    this._pointerLockRetryCount += 1;
+    this._input.tryRequestPointerLock();
+    this.updateFallbackLookIndicator();
+
+    if (this._pointerLockRetryCount >= this._pointerLockRetryAttempts) {
+      return;
+    }
+
+    this._pointerLockRetryTimer = window.setTimeout(() => {
+      this._pointerLockRetryTimer = null;
+      this.tryRequestPointerLock();
+    }, this._pointerLockRetryDelayMs);
+  }
+
+  private clearPointerLockRetry(): void {
+    if (this._pointerLockRetryTimer !== null) {
+      window.clearTimeout(this._pointerLockRetryTimer);
+      this._pointerLockRetryTimer = null;
+    }
+    this._pointerLockRetryCount = 0;
+  }
+
+  private updateFallbackLookIndicator(): void {
+    const showDragFallback =
+      !this._input.isMobile &&
+      (this._mode === 'firstPerson' || this._mode === 'thirdPerson') &&
+      this._input.pointerLockEnabled &&
+      !this._input.pointerLocked;
+
+    this._domElement.style.cursor = showDragFallback ? 'grab' : '';
+    this._domElement.title = showDragFallback ? this._fallbackLookTitle : '';
+  }
+
   private getCameraAltitude(): number {
     return this.camera.position.distanceTo(this._planetCenter) - this._getPlanetRadius();
   }
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    this.clearPointerLockRetry();
+    this._domElement.style.cursor = '';
+    this._domElement.title = '';
     this.orbitMode.dispose();
     this.astronautModel.dispose();
     this.transitionController.dispose();
