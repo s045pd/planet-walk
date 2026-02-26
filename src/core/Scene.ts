@@ -98,6 +98,7 @@ export class SceneManager implements IDisposable {
   }
 
   private createStars(): void {
+    const starSizeMultiplier = 3.0;
     const positions = new Float32Array(STAR_COUNT * 3);
     const sizes = new Float32Array(STAR_COUNT);
     const brightness = new Float32Array(STAR_COUNT);
@@ -113,8 +114,8 @@ export class SceneManager implements IDisposable {
       positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = r * Math.cos(phi);
-      sizes[i] = THREE.MathUtils.randFloat(2.2, 7.2);
-      brightness[i] = THREE.MathUtils.randFloat(0.5, 1.0);
+      sizes[i] = THREE.MathUtils.randFloat(3.0, 8.8);
+      brightness[i] = THREE.MathUtils.randFloat(0.9, 1.7);
     }
 
     const geometry = new THREE.BufferGeometry();
@@ -128,27 +129,35 @@ export class SceneManager implements IDisposable {
       blending: THREE.AdditiveBlending,
       uniforms: {
         visibility: visibilityUniform,
+        sizeMultiplier: { value: starSizeMultiplier },
+        brightnessBoost: { value: 1.45 },
       },
       vertexShader: `
         attribute float size;
         attribute float brightness;
+        uniform float sizeMultiplier;
         varying float vBrightness;
 
         void main() {
           vBrightness = brightness;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = max(0.9, size * (64000.0 / max(-mvPosition.z, 1.0)));
+          gl_PointSize = max(3.0, size * sizeMultiplier * (84000.0 / max(-mvPosition.z, 1.0)));
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
       fragmentShader: `
         uniform float visibility;
+        uniform float brightnessBoost;
         varying float vBrightness;
 
         void main() {
           float d = distance(gl_PointCoord, vec2(0.5));
-          float alpha = smoothstep(0.5, 0.0, d) * vBrightness * visibility;
-          gl_FragColor = vec4(vec3(vBrightness), alpha);
+          float core = smoothstep(0.5, 0.0, d);
+          float halo = smoothstep(0.88, 0.16, d) * 0.5;
+          float glow = (core + halo) * vBrightness * brightnessBoost;
+          float alpha = glow * visibility;
+          vec3 color = vec3(0.9, 0.94, 1.0) * glow;
+          gl_FragColor = vec4(color, alpha);
         }
       `,
     });
@@ -157,7 +166,7 @@ export class SceneManager implements IDisposable {
     this.stars.frustumCulled = false;
     this.scene.add(this.stars);
 
-    const milkyCount = Math.max(1800, Math.floor(STAR_COUNT * 0.38));
+    const milkyCount = Math.max(2200, Math.floor(STAR_COUNT * 0.5));
     const milkyPositions = new Float32Array(milkyCount * 3);
     const milkySizes = new Float32Array(milkyCount);
     const milkyBrightness = new Float32Array(milkyCount);
@@ -168,9 +177,9 @@ export class SceneManager implements IDisposable {
       THREE.MathUtils.degToRad(38),
     );
     for (let i = 0; i < milkyCount; i++) {
-      const r = THREE.MathUtils.lerp(minRadius * 0.9, maxRadius * 0.95, Math.random());
+      const r = THREE.MathUtils.lerp(minRadius * 0.92, maxRadius * 0.98, Math.random());
       const theta = Math.random() * Math.PI * 2;
-      const bandOffset = THREE.MathUtils.randFloatSpread(0.24);
+      const bandOffset = THREE.MathUtils.randFloatSpread(0.16);
       const c = Math.cos(bandOffset);
 
       bandDirection
@@ -180,8 +189,8 @@ export class SceneManager implements IDisposable {
       milkyPositions[i * 3] = bandDirection.x * r;
       milkyPositions[i * 3 + 1] = bandDirection.y * r;
       milkyPositions[i * 3 + 2] = bandDirection.z * r;
-      milkySizes[i] = THREE.MathUtils.randFloat(4.0, 11.0);
-      milkyBrightness[i] = THREE.MathUtils.randFloat(0.72, 1.0);
+      milkySizes[i] = THREE.MathUtils.randFloat(2.4, 6.8);
+      milkyBrightness[i] = THREE.MathUtils.randFloat(0.25, 0.65);
     }
 
     const milkyGeometry = new THREE.BufferGeometry();
@@ -195,29 +204,34 @@ export class SceneManager implements IDisposable {
       blending: THREE.AdditiveBlending,
       uniforms: {
         visibility: visibilityUniform,
+        sizeMultiplier: { value: starSizeMultiplier },
+        brightnessBoost: { value: 0.6 },
       },
       vertexShader: `
         attribute float size;
         attribute float brightness;
+        uniform float sizeMultiplier;
         varying float vBrightness;
 
         void main() {
           vBrightness = brightness;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = max(1.2, size * (72000.0 / max(-mvPosition.z, 1.0)));
+          gl_PointSize = max(1.6, size * sizeMultiplier * (78000.0 / max(-mvPosition.z, 1.0)));
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
       fragmentShader: `
         uniform float visibility;
+        uniform float brightnessBoost;
         varying float vBrightness;
 
         void main() {
           float d = distance(gl_PointCoord, vec2(0.5));
-          float core = smoothstep(0.5, 0.0, d);
-          float halo = smoothstep(0.85, 0.2, d) * 0.55;
-          float alpha = (core + halo) * vBrightness * visibility * 0.75;
-          vec3 color = mix(vec3(0.58, 0.68, 0.95), vec3(1.0), vBrightness);
+          float core = smoothstep(0.58, 0.02, d) * 0.45;
+          float halo = smoothstep(0.92, 0.2, d) * 0.85;
+          float bandGlow = (core + halo) * vBrightness * brightnessBoost;
+          float alpha = bandGlow * visibility * 0.78;
+          vec3 color = mix(vec3(0.46, 0.56, 0.86), vec3(0.85, 0.88, 1.0), vBrightness) * bandGlow;
           gl_FragColor = vec4(color, alpha);
         }
       `,
