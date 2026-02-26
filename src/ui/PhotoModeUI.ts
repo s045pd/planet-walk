@@ -1,4 +1,5 @@
 import type { IDisposable } from '../core/types';
+import { onLocaleChange, t } from '../i18n';
 import type { PhotoFilterType } from '../postprocess/FilterManager';
 import { clamp } from '../utils/math';
 
@@ -18,11 +19,18 @@ interface PhotoModeUIState {
 /** 照片模式界面：滤镜、HUD开关、截图和FOV调节 */
 export class PhotoModeUI implements IDisposable {
   private readonly root: HTMLDivElement;
+  private readonly title: HTMLDivElement;
+  private readonly filterLabel: HTMLDivElement;
+  private readonly hudText: HTMLSpanElement;
+  private readonly fovLabel: HTMLSpanElement;
+  private readonly tip: HTMLSpanElement;
+  private readonly captureButton: HTMLButtonElement;
   private readonly hudToggle: HTMLInputElement;
   private readonly fovSlider: HTMLInputElement;
   private readonly fovValue: HTMLSpanElement;
   private readonly screenshotToast: HTMLDivElement;
   private readonly filterButtons = new Map<PhotoFilterType, HTMLButtonElement>();
+  private readonly unsubscribeLocaleChange: () => void;
 
   private readonly onFilterChange: (filter: PhotoFilterType) => void;
   private readonly onCapture: () => void;
@@ -50,13 +58,11 @@ export class PhotoModeUI implements IDisposable {
       display: none;
     `;
 
-    const title = document.createElement('div');
-    title.textContent = '照片模式';
-    title.style.cssText = 'font-size:clamp(13px, 3.4vw, 14px);font-weight:700;letter-spacing:0.4px;margin-bottom:10px;';
+    this.title = document.createElement('div');
+    this.title.style.cssText = 'font-size:clamp(13px, 3.4vw, 14px);font-weight:700;letter-spacing:0.4px;margin-bottom:10px;';
 
-    const filterLabel = document.createElement('div');
-    filterLabel.textContent = '滤镜';
-    filterLabel.style.cssText = 'font-size:clamp(11px, 3vw, 12px);opacity:0.85;margin-bottom:6px;';
+    this.filterLabel = document.createElement('div');
+    this.filterLabel.style.cssText = 'font-size:clamp(11px, 3vw, 12px);opacity:0.85;margin-bottom:6px;';
 
     const filterPanel = document.createElement('div');
     filterPanel.style.cssText = `
@@ -66,10 +72,10 @@ export class PhotoModeUI implements IDisposable {
 
     const filterRow = document.createElement('div');
     filterRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
-    this.createFilterButton(filterRow, '正常', 'normal');
-    this.createFilterButton(filterRow, '复古', 'vintage');
-    this.createFilterButton(filterRow, '科幻', 'sci-fi');
-    this.createFilterButton(filterRow, '黑白', 'bw');
+    this.createFilterButton(filterRow, 'photoMode.filter.normal', 'normal');
+    this.createFilterButton(filterRow, 'photoMode.filter.vintage', 'vintage');
+    this.createFilterButton(filterRow, 'photoMode.filter.sciFi', 'sci-fi');
+    this.createFilterButton(filterRow, 'photoMode.filter.bw', 'bw');
     filterPanel.append(filterRow);
 
     const hudRow = document.createElement('label');
@@ -80,19 +86,17 @@ export class PhotoModeUI implements IDisposable {
     this.hudToggle.addEventListener('change', () => {
       this.onHudToggle(this.hudToggle.checked);
     });
-    const hudText = document.createElement('span');
-    hudText.textContent = '隐藏HUD';
-    hudRow.append(this.hudToggle, hudText);
+    this.hudText = document.createElement('span');
+    hudRow.append(this.hudToggle, this.hudText);
 
     const fovHeader = document.createElement('div');
     fovHeader.style.cssText =
       'display:flex;justify-content:space-between;align-items:center;font-size:clamp(11px, 3vw, 12px);margin-bottom:6px;';
-    const fovLabel = document.createElement('span');
-    fovLabel.textContent = 'FOV';
+    this.fovLabel = document.createElement('span');
     this.fovValue = document.createElement('span');
     this.fovValue.textContent = '60°';
     this.fovValue.style.opacity = '0.9';
-    fovHeader.append(fovLabel, this.fovValue);
+    fovHeader.append(this.fovLabel, this.fovValue);
 
     this.fovSlider = document.createElement('input');
     this.fovSlider.type = 'range';
@@ -109,24 +113,21 @@ export class PhotoModeUI implements IDisposable {
     const actionRow = document.createElement('div');
     actionRow.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
 
-    const captureButton = document.createElement('button');
-    captureButton.textContent = '拍照';
-    captureButton.type = 'button';
-    captureButton.style.cssText =
+    this.captureButton = document.createElement('button');
+    this.captureButton.type = 'button';
+    this.captureButton.style.cssText =
       'padding:7px 12px;border-radius:8px;border:1px solid rgba(117,196,255,0.5);background:#2274d6;color:#fff;cursor:pointer;font-size:clamp(11px, 3vw, 12px);font-weight:600;min-height:44px;min-width:44px;';
-    captureButton.addEventListener('click', () => {
+    this.captureButton.addEventListener('click', () => {
       this.onCapture();
       this.showScreenshotToast();
     });
 
-    const tip = document.createElement('span');
-    tip.textContent = 'P 退出';
-    tip.style.cssText = 'font-size:clamp(10px, 2.8vw, 11px);opacity:0.7;';
+    this.tip = document.createElement('span');
+    this.tip.style.cssText = 'font-size:clamp(10px, 2.8vw, 11px);opacity:0.7;';
 
-    actionRow.append(captureButton, tip);
+    actionRow.append(this.captureButton, this.tip);
 
     this.screenshotToast = document.createElement('div');
-    this.screenshotToast.textContent = 'Screenshot saved!';
     this.screenshotToast.style.cssText = `
       position:absolute; right:14px; bottom:14px;
       padding:6px 10px; border-radius:8px;
@@ -138,10 +139,14 @@ export class PhotoModeUI implements IDisposable {
       pointer-events:none;
     `;
 
-    this.root.append(title, filterLabel, filterPanel, hudRow, fovHeader, this.fovSlider, actionRow, this.screenshotToast);
+    this.root.append(this.title, this.filterLabel, filterPanel, hudRow, fovHeader, this.fovSlider, actionRow, this.screenshotToast);
     document.body.appendChild(this.root);
+    this.applyLocalizedText();
     this.applyResponsiveLayout();
     window.addEventListener('resize', this.onResize);
+    this.unsubscribeLocaleChange = onLocaleChange(() => {
+      this.applyLocalizedText();
+    });
   }
 
   show(state: PhotoModeUIState): void {
@@ -182,6 +187,7 @@ export class PhotoModeUI implements IDisposable {
   }
 
   dispose(): void {
+    this.unsubscribeLocaleChange();
     if (this.toastTimer !== null) {
       window.clearTimeout(this.toastTimer);
       this.toastTimer = null;
@@ -192,12 +198,12 @@ export class PhotoModeUI implements IDisposable {
 
   private createFilterButton(
     container: HTMLElement,
-    label: string,
+    labelKey: string,
     filter: PhotoFilterType,
   ): void {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = label;
+    button.dataset.labelKey = labelKey;
     button.style.cssText =
       'padding:6px 10px;border-radius:7px;border:1px solid #6b89b4;background:#131d2c;color:#f6fbff;cursor:pointer;font-size:clamp(11px, 3vw, 12px);font-weight:600;min-height:44px;min-width:44px;';
     button.addEventListener('click', () => {
@@ -206,6 +212,23 @@ export class PhotoModeUI implements IDisposable {
     });
     this.filterButtons.set(filter, button);
     container.appendChild(button);
+  }
+
+  private applyLocalizedText(): void {
+    this.title.textContent = t('photoMode.title');
+    this.filterLabel.textContent = t('photoMode.filter');
+    this.hudText.textContent = t('photoMode.hideHud');
+    this.fovLabel.textContent = 'FOV';
+    this.captureButton.textContent = t('photoMode.capture');
+    this.tip.textContent = t('photoMode.tipExit');
+    this.screenshotToast.textContent = t('photoMode.toastSaved');
+
+    for (const button of this.filterButtons.values()) {
+      const labelKey = button.dataset.labelKey;
+      if (labelKey) {
+        button.textContent = t(labelKey);
+      }
+    }
   }
 
   private showScreenshotToast(): void {
