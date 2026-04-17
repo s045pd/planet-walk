@@ -1,137 +1,147 @@
-import type * as THREE from 'three';
-import type { IDisposable } from '../core/types';
-import { onLocaleChange, t } from '../i18n';
+import type { Telemetry } from '../core/types';
+import { applyPaletteToBackground } from '../planet/Planet';
+import type { PlanetConfig } from '../planet/PlanetConfigs';
+import { Phase } from './Phase';
+import { RightPanel } from './RightPanel';
+import { TelemetryStrip } from './Telemetry';
+import { TopBar } from './TopBar';
+import { WorldSelect } from './WorldSelect';
 
-export interface HUDData {
-  planetName: string;
-  lat: number;
-  lng: number;
-  alt: number;
-  position: THREE.Vector3;
-  localTime: string;
-  timeScaleLabel: string;
+function hex(color: { r: number; g: number; b: number }): string {
+  const c = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
+  return `#${c(color.r)}${c(color.g)}${c(color.b)}`;
 }
 
-/** 简单抬头显示：星球名 + 地理坐标 + 世界坐标 */
-export class HUD implements IDisposable {
-  private readonly root: HTMLDivElement;
-  private readonly planetLine: HTMLDivElement;
-  private readonly geoLine: HTMLDivElement;
-  private readonly timeLine: HTMLDivElement;
-  private readonly unsubscribeLocaleChange: () => void;
-  private lastData: HUDData | null = null;
-  private visible = true;
+export class HUD {
+  private root: HTMLElement;
+  readonly topbar: TopBar;
+  readonly phase: Phase;
+  readonly right: RightPanel;
+  readonly telemetry: TelemetryStrip;
+  readonly worldSelect: WorldSelect;
+  private viewport: HTMLElement;
+  private targetPin: HTMLElement;
+  private modeBtn: HTMLButtonElement;
+  private descentEl: HTMLElement;
+  private activeConfig: PlanetConfig | null = null;
 
-  constructor() {
+  constructor(onPick: (config: PlanetConfig) => void, onToggleMode: () => void) {
     this.root = document.createElement('div');
-    this.root.style.position = 'fixed';
-    this.root.style.top = '16px';
-    this.root.style.left = '16px';
-    this.root.style.padding = '10px 12px';
-    this.root.style.background = 'rgba(6, 12, 22, 0.55)';
-    this.root.style.border = '1px solid rgba(155, 188, 255, 0.35)';
-    this.root.style.borderRadius = '8px';
-    this.root.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace';
-    this.root.style.fontSize = 'clamp(11px, 2.6vw, 12px)';
-    this.root.style.lineHeight = '1.5';
-    this.root.style.color = '#e7f1ff';
-    this.root.style.pointerEvents = 'none';
-    this.root.style.userSelect = 'none';
-    this.root.style.minWidth = 'min(250px, calc(100vw - 32px))';
-    this.root.style.maxWidth = 'min(360px, calc(100vw - 32px))';
-    this.root.style.maxHeight = '80vh';
-    this.root.style.overflowY = 'auto';
-    this.root.style.wordBreak = 'break-word';
-    this.root.style.backdropFilter = 'blur(4px)';
-    this.root.style.zIndex = '10';
-
-    this.planetLine = document.createElement('div');
-    this.geoLine = document.createElement('div');
-    this.timeLine = document.createElement('div');
-
-    this.root.append(this.planetLine, this.geoLine, this.timeLine);
+    this.root.id = 'hud';
     document.body.appendChild(this.root);
-    this.applyResponsiveLayout();
-    window.addEventListener('resize', this.onResize);
-    this.unsubscribeLocaleChange = onLocaleChange(() => {
-      this.render();
+
+    this.topbar = new TopBar(this.root);
+    this.phase = new Phase(this.root);
+
+    this.viewport = document.createElement('section');
+    this.viewport.className = 'viewport';
+    this.viewport.innerHTML = `
+      <div class="viewport__bracket viewport__bracket--tl"></div>
+      <div class="viewport__bracket viewport__bracket--tr"></div>
+      <div class="viewport__bracket viewport__bracket--bl"></div>
+      <div class="viewport__bracket viewport__bracket--br"></div>
+      <div class="viewport__cam">
+        <span data-cam-mode>CAM · 03 · ORBIT OBSERVER</span>
+        <span class="muted">EXPOSURE 1/60 · F 2.8 · ISO 800</span>
+      </div>
+      <div class="viewport__crosshair"></div>
+      <div class="target__pin" data-target>
+        <strong data-target-name>TARGET</strong>
+        <small data-target-coord>0.0° · 0.0°</small>
+        <small data-target-dist>DIST · BEARING</small>
+      </div>
+      <button class="modebtn modebtn--land" data-ui data-modebtn type="button">
+        <span class="modebtn__marker">▾</span><span data-modebtn-label>INITIATE LANDING</span>
+      </button>
+      <div class="descent" data-descent>
+        <div class="descent__label" data-descent-label>DESCENT · ENTRY INTERFACE</div>
+      </div>
+    `;
+    this.root.appendChild(this.viewport);
+    this.targetPin = this.viewport.querySelector('[data-target]') as HTMLElement;
+    this.modeBtn = this.viewport.querySelector('[data-modebtn]') as HTMLButtonElement;
+    this.descentEl = this.viewport.querySelector('[data-descent]') as HTMLElement;
+    this.modeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onToggleMode();
     });
+
+    this.right = new RightPanel(this.root);
+    this.telemetry = new TelemetryStrip(this.root);
+
+    const legend = document.createElement('div');
+    legend.className = 'legend';
+    legend.innerHTML = `
+      <div class="legend__keys">
+        <span><kbd>W A S D</kbd>TRANSLATE</span>
+        <span><kbd>␣</kbd>JUMP</span>
+        <span><kbd>MOUSE</kbd>GAZE</span>
+        <span><kbd>TAB</kbd>ORBIT / SURFACE</span>
+        <span><kbd>M</kbd>WORLDS</span>
+      </div>
+      <div>PLANET·WALK / 2026 · S045PD</div>
+    `;
+    this.root.appendChild(legend);
+
+    this.worldSelect = new WorldSelect(document.body, onPick);
   }
 
-  update(data: HUDData): void {
-    this.lastData = data;
-    this.render();
+  setConfig(config: PlanetConfig): void {
+    this.activeConfig = config;
+    applyPaletteToBackground(document.body, config);
+    document.body.style.background = `linear-gradient(to bottom, ${hex(config.sky.top)}, ${hex(config.sky.horizon)} 85%, ${hex(config.sky.top)})`;
+    this.topbar.setMission(config);
+    this.phase.setConfig(config);
+    this.worldSelect.setActive(config.id);
+
+    const site = config.landingSite;
+    const nameEl = this.targetPin.querySelector('[data-target-name]') as HTMLElement;
+    const coordEl = this.targetPin.querySelector('[data-target-coord]') as HTMLElement;
+    const distEl = this.targetPin.querySelector('[data-target-dist]') as HTMLElement;
+    nameEl.textContent = `TARGET · ${site.name.toUpperCase()}`;
+    coordEl.textContent = `${site.lat.toFixed(3)}° · ${site.lon.toFixed(3)}°`;
+    distEl.textContent = `LANDING ZONE`;
   }
 
-  setVisible(visible: boolean): void {
-    if (this.visible === visible) {
-      return;
+  update(telemetry: Telemetry): void {
+    if (!this.activeConfig) return;
+    const config = this.activeConfig;
+    this.topbar.tick();
+    this.topbar.setSignal(-64 - Math.random() * 2, 120 + Math.random() * 8);
+    this.phase.setMode(telemetry.mode);
+    this.telemetry.update(telemetry, config.solLabel);
+    this.right.update(
+      telemetry,
+      hex(config.sky.top),
+      hex(config.surface.mid),
+    );
+
+    const camMode = this.viewport.querySelector('[data-cam-mode]') as HTMLElement;
+    camMode.textContent = telemetry.mode === 'orbit'
+      ? 'CAM · 03 · ORBIT OBSERVER'
+      : 'CAM · 07 · SURFACE WALKER';
+
+    this.targetPin.style.display = telemetry.mode === 'orbit' ? 'block' : 'none';
+
+    const label = this.modeBtn.querySelector('[data-modebtn-label]') as HTMLElement;
+    const marker = this.modeBtn.querySelector('.modebtn__marker') as HTMLElement;
+    if (telemetry.mode === 'orbit') {
+      this.modeBtn.classList.remove('modebtn--abort');
+      this.modeBtn.classList.add('modebtn--land');
+      label.textContent = 'INITIATE LANDING';
+      marker.textContent = '▾';
+    } else {
+      this.modeBtn.classList.remove('modebtn--land');
+      this.modeBtn.classList.add('modebtn--abort');
+      label.textContent = 'RETURN TO ORBIT';
+      marker.textContent = '▴';
     }
-    this.visible = visible;
-    this.root.style.display = visible ? 'block' : 'none';
   }
 
-  dispose(): void {
-    this.unsubscribeLocaleChange();
-    window.removeEventListener('resize', this.onResize);
-    this.root.remove();
-  }
-
-  private render(): void {
-    if (!this.lastData) {
-      return;
-    }
-
-    const { planetName, lat, lng, alt, localTime, timeScaleLabel } = this.lastData;
-    const planet = this.getLocalizedPlanetName(planetName);
-    const displayAlt = Math.max(0, alt);
-    const localizedScale = timeScaleLabel === 'Paused'
-      ? t('timeScale.paused')
-      : timeScaleLabel;
-
-    this.planetLine.textContent = t('hud.planet', { planet });
-    this.geoLine.textContent = t('hud.geo', {
-      lat: lat.toFixed(2),
-      lng: lng.toFixed(2),
-      alt: displayAlt.toFixed(1),
-    });
-    this.timeLine.textContent = t('hud.time', {
-      time: localTime,
-      scale: localizedScale,
-    });
-  }
-
-  private getLocalizedPlanetName(planetName: string): string {
-    const key = `planet.${planetName.toLowerCase()}`;
-    const localized = t(key);
-    return localized === key ? planetName.toUpperCase() : localized;
-  }
-
-  private onResize = (): void => {
-    this.applyResponsiveLayout();
-  };
-
-  private applyResponsiveLayout(): void {
-    const compactViewport = window.innerWidth <= 480 || window.innerHeight <= 680;
-    if (compactViewport) {
-      this.root.style.top = '76px';
-      this.root.style.left = '12px';
-      this.root.style.right = '12px';
-      this.root.style.minWidth = '0';
-      this.root.style.maxWidth = 'none';
-      this.root.style.width = 'calc(100vw - 24px)';
-      this.root.style.padding = '8px 10px';
-      this.root.style.fontSize = 'clamp(10px, 3.1vw, 11px)';
-      return;
-    }
-
-    this.root.style.top = '16px';
-    this.root.style.left = '16px';
-    this.root.style.right = 'auto';
-    this.root.style.width = 'auto';
-    this.root.style.padding = '10px 12px';
-    this.root.style.fontSize = 'clamp(11px, 2.6vw, 12px)';
-    this.root.style.minWidth = 'min(250px, calc(100vw - 32px))';
-    this.root.style.maxWidth = 'min(360px, calc(100vw - 32px))';
+  setDescent(active: boolean, label = 'DESCENT · ENTRY INTERFACE'): void {
+    this.descentEl.classList.toggle('is-active', active);
+    const el = this.descentEl.querySelector('[data-descent-label]') as HTMLElement;
+    el.textContent = label;
+    this.modeBtn.style.visibility = active ? 'hidden' : 'visible';
   }
 }

@@ -10,7 +10,8 @@
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "textures:download": "npx tsx scripts/download-textures.ts",
-    "textures:compress": "npx tsx scripts/compress-textures.ts"
+    "textures:compress": "npx tsx scripts/compress-textures.ts",
+    "deploy": "npm run build && npx gh-pages -d dist -b gh-pages -m \"deploy: manual\""
   },
   "devDependencies": {
     "@types/three": "^0.183.1",

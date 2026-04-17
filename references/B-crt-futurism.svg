@@ -1,0 +1,259 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" font-family="'VT323', 'Courier New', monospace">
+  <defs>
+    <radialGradient id="planet-b" cx="35%" cy="30%">
+      <stop offset="0%" stop-color="#FF6B9D"/>
+      <stop offset="30%" stop-color="#8A2B7D"/>
+      <stop offset="70%" stop-color="#2A0845"/>
+      <stop offset="100%" stop-color="#0D0221"/>
+    </radialGradient>
+    <radialGradient id="atmo-b" cx="50%" cy="50%">
+      <stop offset="70%" stop-color="#00FFFF" stop-opacity="0"/>
+      <stop offset="90%" stop-color="#00FFFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FF10F0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bg-b" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0D0221"/>
+      <stop offset="50%" stop-color="#1A0845"/>
+      <stop offset="100%" stop-color="#0D0221"/>
+    </linearGradient>
+    <linearGradient id="horizon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF10F0" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#FF10F0" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#00FFFF" stop-opacity="0.15"/>
+    </linearGradient>
+    <pattern id="scanlines" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="transparent"/>
+      <rect y="2" width="3" height="1" fill="#000" opacity="0.35"/>
+    </pattern>
+    <pattern id="pixels" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="transparent"/>
+      <rect width="1" height="1" fill="#FF10F0" opacity="0.15"/>
+    </pattern>
+    <filter id="glow-b">
+      <feGaussianBlur stdDeviation="2"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-strong">
+      <feGaussianBlur stdDeviation="4"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1440" height="900" fill="url(#bg-b)"/>
+
+  <!-- perspective grid floor -->
+  <g opacity="0.6" stroke="#FF10F0" stroke-width="1" fill="none">
+    <line x1="0" y1="720" x2="1440" y2="720" stroke="#00FFFF" stroke-width="1.5"/>
+    <path d="M 720 720 L -200 900" />
+    <path d="M 720 720 L -80 900" />
+    <path d="M 720 720 L 120 900" />
+    <path d="M 720 720 L 320 900" />
+    <path d="M 720 720 L 520 900" />
+    <path d="M 720 720 L 720 900" stroke="#00FFFF"/>
+    <path d="M 720 720 L 920 900" />
+    <path d="M 720 720 L 1120 900" />
+    <path d="M 720 720 L 1320 900" />
+    <path d="M 720 720 L 1520 900" />
+    <path d="M 720 720 L 1640 900" />
+    <line x1="0" y1="755" x2="1440" y2="755" stroke="#FF10F0" opacity="0.7"/>
+    <line x1="0" y1="795" x2="1440" y2="795" stroke="#FF10F0" opacity="0.6"/>
+    <line x1="0" y1="845" x2="1440" y2="845" stroke="#FF10F0" opacity="0.5"/>
+  </g>
+
+  <!-- horizon glow -->
+  <rect x="0" y="640" width="1440" height="120" fill="url(#horizon)"/>
+
+  <!-- planet -->
+  <g transform="translate(720,420)">
+    <circle r="350" fill="url(#atmo-b)"/>
+    <circle r="260" fill="url(#planet-b)"/>
+    <!-- surface bands -->
+    <ellipse cx="-40" cy="-80" rx="180" ry="20" fill="#FF6B9D" opacity="0.35"/>
+    <ellipse cx="30" cy="30" rx="200" ry="25" fill="#FF10F0" opacity="0.2"/>
+    <ellipse cx="-60" cy="120" rx="160" ry="22" fill="#00FFFF" opacity="0.12"/>
+    <circle cx="100" cy="-110" r="35" fill="#FFE600" opacity="0.4"/>
+
+    <!-- orbit rings -->
+    <ellipse rx="360" ry="90" fill="none" stroke="#00FFFF" stroke-width="1" opacity="0.6" stroke-dasharray="4 6"/>
+    <ellipse rx="440" ry="110" fill="none" stroke="#FF10F0" stroke-width="1" opacity="0.4" stroke-dasharray="2 8"/>
+
+    <!-- tracking bracket corners -->
+    <g stroke="#00FFFF" stroke-width="2" fill="none" filter="url(#glow-b)">
+      <path d="M -320 -320 L -320 -280 M -320 -320 L -280 -320"/>
+      <path d="M 320 -320 L 320 -280 M 320 -320 L 280 -320"/>
+      <path d="M -320 320 L -320 280 M -320 320 L -280 320"/>
+      <path d="M 320 320 L 320 280 M 320 320 L 280 320"/>
+    </g>
+    <!-- center crosshair -->
+    <g stroke="#FF10F0" stroke-width="1" opacity="0.8">
+      <line x1="-20" y1="0" x2="-6" y2="0"/>
+      <line x1="6" y1="0" x2="20" y2="0"/>
+      <line x1="0" y1="-20" x2="0" y2="-6"/>
+      <line x1="0" y1="6" x2="0" y2="20"/>
+    </g>
+  </g>
+
+  <!-- top bar -->
+  <g>
+    <rect x="0" y="0" width="1440" height="50" fill="#0D0221"/>
+    <line x1="0" y1="50" x2="1440" y2="50" stroke="#FF10F0" stroke-width="2" filter="url(#glow-b)"/>
+
+    <text x="30" y="32" fill="#00FFFF" font-size="22" letter-spacing="4" filter="url(#glow-b)">◆ PLANET.WALK_v0.1</text>
+
+    <!-- nav tabs -->
+    <g font-size="16" letter-spacing="3">
+      <text x="400" y="32" fill="#FF10F0" filter="url(#glow-b)">&gt; MARS</text>
+      <text x="520" y="32" fill="#00FFFF" opacity="0.5">  TERRA</text>
+      <text x="640" y="32" fill="#00FFFF" opacity="0.5">  LUNA</text>
+      <text x="750" y="32" fill="#00FFFF" opacity="0.5">  VENUS</text>
+      <text x="870" y="32" fill="#00FFFF" opacity="0.5">  EUROPA</text>
+    </g>
+
+    <text x="1410" y="32" fill="#FFE600" font-size="16" text-anchor="end" filter="url(#glow-b)">SIGNAL //// ████░ 82%</text>
+  </g>
+
+  <!-- left HUD panel -->
+  <g transform="translate(30,80)">
+    <rect width="280" height="270" fill="#0D0221" stroke="#00FFFF" stroke-width="1.5" opacity="0.95"/>
+    <rect y="0" width="280" height="26" fill="#00FFFF"/>
+    <text x="12" y="19" fill="#0D0221" font-size="16" letter-spacing="4">▸ COORDINATES</text>
+
+    <g fill="#00FFFF" font-size="18" letter-spacing="1">
+      <text x="16" y="58" font-size="12" opacity="0.6">LAT_______</text>
+      <text x="16" y="78" filter="url(#glow-b)">-14.502°S</text>
+
+      <text x="16" y="108" font-size="12" opacity="0.6">LON_______</text>
+      <text x="16" y="128" filter="url(#glow-b)">+175.830°E</text>
+
+      <text x="16" y="158" font-size="12" opacity="0.6">ALT_______</text>
+      <text x="16" y="178" fill="#FFE600" filter="url(#glow-b)">+2,847 m</text>
+
+      <text x="16" y="208" font-size="12" opacity="0.6">VEL_______</text>
+      <text x="16" y="228" filter="url(#glow-b)">4.2 m/s ▸▸▸</text>
+
+      <text x="16" y="258" font-size="12" fill="#FF10F0">[ SOL 047 · 12:41 LMST ]</text>
+    </g>
+  </g>
+
+  <!-- left bottom: ASCII planet index -->
+  <g transform="translate(30,370)" font-size="14" letter-spacing="2">
+    <rect width="280" height="280" fill="#0D0221" stroke="#FF10F0" stroke-width="1.5"/>
+    <rect width="280" height="26" fill="#FF10F0"/>
+    <text x="12" y="19" fill="#0D0221" font-size="16" letter-spacing="4">▸ WORLD SELECT</text>
+
+    <g fill="#00FFFF">
+      <text x="16" y="58">01 ░░░ TERRA</text><text x="264" y="58" text-anchor="end" fill="#FFE600">9.81 g</text>
+      <rect x="8" y="70" width="264" height="30" fill="#FF10F0" opacity="0.2"/>
+      <text x="16" y="90" fill="#FF10F0" filter="url(#glow-b)">02 ███ MARS ◀</text><text x="264" y="90" text-anchor="end" fill="#FF10F0" filter="url(#glow-b)">3.72 g</text>
+      <text x="16" y="122">03 ░░░ LUNA</text><text x="264" y="122" text-anchor="end" fill="#FFE600">1.62 g</text>
+      <text x="16" y="154">04 ░░░ VENUS</text><text x="264" y="154" text-anchor="end" fill="#FFE600">8.87 g</text>
+      <text x="16" y="186">05 ░░░ EUROPA</text><text x="264" y="186" text-anchor="end" fill="#FFE600">1.31 g</text>
+      <text x="16" y="218" opacity="0.4">06 ███ ???? LOCKED</text>
+      <text x="16" y="250" font-size="12" fill="#FF10F0" opacity="0.7">[↑↓] CYCLE   [ENTER] WARP</text>
+    </g>
+  </g>
+
+  <!-- right HUD: waveform/spectrum -->
+  <g transform="translate(1130,80)">
+    <rect width="280" height="270" fill="#0D0221" stroke="#FFE600" stroke-width="1.5" opacity="0.95"/>
+    <rect width="280" height="26" fill="#FFE600"/>
+    <text x="12" y="19" fill="#0D0221" font-size="16" letter-spacing="4">▸ SPECTRUM·ANALYZER</text>
+
+    <!-- spectrum bars -->
+    <g fill="#00FFFF">
+      <rect x="16" y="190" width="10" height="-30" transform="translate(0,250) scale(1,1)"/>
+    </g>
+    <g transform="translate(16,235)">
+      <rect x="0" y="-55" width="12" height="55" fill="#00FFFF"/>
+      <rect x="18" y="-80" width="12" height="80" fill="#00FFFF"/>
+      <rect x="36" y="-42" width="12" height="42" fill="#00FFFF"/>
+      <rect x="54" y="-95" width="12" height="95" fill="#FF10F0" filter="url(#glow-b)"/>
+      <rect x="72" y="-68" width="12" height="68" fill="#00FFFF"/>
+      <rect x="90" y="-110" width="12" height="110" fill="#FF10F0" filter="url(#glow-b)"/>
+      <rect x="108" y="-85" width="12" height="85" fill="#00FFFF"/>
+      <rect x="126" y="-60" width="12" height="60" fill="#00FFFF"/>
+      <rect x="144" y="-130" width="12" height="130" fill="#FFE600" filter="url(#glow-strong)"/>
+      <rect x="162" y="-95" width="12" height="95" fill="#FF10F0" filter="url(#glow-b)"/>
+      <rect x="180" y="-72" width="12" height="72" fill="#00FFFF"/>
+      <rect x="198" y="-48" width="12" height="48" fill="#00FFFF"/>
+      <rect x="216" y="-115" width="12" height="115" fill="#FF10F0" filter="url(#glow-b)"/>
+      <rect x="234" y="-65" width="12" height="65" fill="#00FFFF"/>
+    </g>
+    <line x1="16" y1="235" x2="264" y2="235" stroke="#FF10F0" stroke-width="1"/>
+    <text x="16" y="255" fill="#FFE600" font-size="12" letter-spacing="2">ATMOSPHERIC HARMONICS  432 Hz</text>
+  </g>
+
+  <!-- right bottom: telemetry -->
+  <g transform="translate(1130,370)">
+    <rect width="280" height="280" fill="#0D0221" stroke="#FF10F0" stroke-width="1.5"/>
+    <rect width="280" height="26" fill="#FF10F0"/>
+    <text x="12" y="19" fill="#0D0221" font-size="16" letter-spacing="4">▸ SYS·DIAG</text>
+
+    <g fill="#00FFFF" font-size="14" letter-spacing="2">
+      <text x="16" y="58">FPS______</text>
+      <rect x="130" y="47" width="134" height="14" fill="#0D0221" stroke="#00FFFF" stroke-width="0.5"/>
+      <rect x="132" y="49" width="124" height="10" fill="#00FFFF"/>
+      <text x="264" y="58" text-anchor="end" fill="#0D0221" font-size="12">60.0</text>
+
+      <text x="16" y="88">MEM______</text>
+      <rect x="130" y="77" width="134" height="14" fill="#0D0221" stroke="#00FFFF" stroke-width="0.5"/>
+      <rect x="132" y="79" width="58" height="10" fill="#FFE600"/>
+      <text x="264" y="88" text-anchor="end" font-size="12">142MB</text>
+
+      <text x="16" y="118">LOD______</text>
+      <rect x="130" y="107" width="134" height="14" fill="#0D0221" stroke="#00FFFF" stroke-width="0.5"/>
+      <rect x="132" y="109" width="90" height="10" fill="#FF10F0"/>
+      <text x="264" y="118" text-anchor="end" font-size="12">1,284</text>
+
+      <text x="16" y="148">DRAW_____</text>
+      <text x="264" y="148" text-anchor="end" fill="#FFE600">87 calls</text>
+
+      <text x="16" y="178">HDG______</text>
+      <text x="264" y="178" text-anchor="end" fill="#FF10F0">042.7°</text>
+
+      <text x="16" y="220" fill="#FFE600" font-size="12">▸ TRANSMISSION LOG</text>
+      <text x="16" y="240" font-size="11" opacity="0.8">&gt; landed at sector 14.5S</text>
+      <text x="16" y="255" font-size="11" opacity="0.6">&gt; atmosphere: 0.6 kPa</text>
+    </g>
+  </g>
+
+  <!-- bottom: key bar -->
+  <g transform="translate(0,820)">
+    <rect width="1440" height="80" fill="#0D0221" opacity="0.9"/>
+    <line x1="0" y1="0" x2="1440" y2="0" stroke="#00FFFF" stroke-width="1.5" filter="url(#glow-b)"/>
+    <g font-size="14" letter-spacing="3" fill="#00FFFF">
+      <g transform="translate(40,30)">
+        <rect width="40" height="30" fill="none" stroke="#00FFFF"/><text x="20" y="20" text-anchor="middle">W</text>
+        <rect x="45" width="40" height="30" fill="none" stroke="#00FFFF"/><text x="65" y="20" text-anchor="middle">A</text>
+        <rect x="90" width="40" height="30" fill="none" stroke="#00FFFF"/><text x="110" y="20" text-anchor="middle">S</text>
+        <rect x="135" width="40" height="30" fill="none" stroke="#00FFFF"/><text x="155" y="20" text-anchor="middle">D</text>
+        <text x="190" y="20" fill="#FF10F0">STRIDE</text>
+      </g>
+      <g transform="translate(340,30)">
+        <rect width="80" height="30" fill="none" stroke="#00FFFF"/><text x="40" y="20" text-anchor="middle">SPACE</text>
+        <text x="96" y="20" fill="#FF10F0">JUMP</text>
+      </g>
+      <g transform="translate(500,30)">
+        <rect width="50" height="30" fill="none" stroke="#00FFFF"/><text x="25" y="20" text-anchor="middle">TAB</text>
+        <text x="64" y="20" fill="#FF10F0">WARP ORBIT⇄SURFACE</text>
+      </g>
+      <g transform="translate(880,30)">
+        <rect width="40" height="30" fill="none" stroke="#00FFFF"/><text x="20" y="20" text-anchor="middle">M</text>
+        <text x="52" y="20" fill="#FF10F0">MAP</text>
+        <rect x="120" width="40" height="30" fill="none" stroke="#00FFFF"/><text x="140" y="20" text-anchor="middle">F</text>
+        <text x="172" y="20" fill="#FF10F0">LOG</text>
+      </g>
+      <text x="1410" y="50" text-anchor="end" fill="#FFE600" filter="url(#glow-b)">● LIVE · 2026-04-17</text>
+    </g>
+  </g>
+
+  <!-- scanlines overlay -->
+  <rect width="1440" height="900" fill="url(#scanlines)" pointer-events="none"/>
+
+  <!-- vignette -->
+  <radialGradient id="vig" cx="50%" cy="50%" r="70%">
+    <stop offset="60%" stop-color="#000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000" stop-opacity="0.7"/>
+  </radialGradient>
+  <rect width="1440" height="900" fill="url(#vig)" pointer-events="none"/>
+</svg>
