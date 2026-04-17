@@ -460,6 +460,74 @@ body, canvas#app { cursor: crosshair; }
   color: rgb(var(--green));
 }
 
+/* ==================== MINIMAP (left-bottom corner, surface only) ==================== */
+.minimap {
+  grid-row: 2; grid-column: 1;
+  align-self: end;
+  justify-self: start;
+  margin: 0 0 40px 28px;
+  padding: 14px 14px 10px 14px;
+  background: rgb(var(--panel) / 0.85);
+  border: 0.5px solid rgb(var(--fg) / 0.35);
+  backdrop-filter: blur(8px);
+  display: none;
+}
+.minimap__label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  color: rgb(var(--fg) / 0.55);
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid rgb(var(--rule) / 0.25);
+  margin-bottom: 8px;
+}
+.minimap__canvas {
+  display: block;
+  width: 180px;
+  height: 180px;
+  image-rendering: pixelated;
+}
+.minimap__scale {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  color: rgb(var(--fg) / 0.45);
+  text-align: right;
+}
+
+/* ==================== CINEMATIC DESCENT ==================== */
+.viewport.is-shaking {
+  animation: viewport-shake 0.6s linear infinite;
+}
+@keyframes viewport-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-3px, 2px); }
+  40% { transform: translate(4px, -1px); }
+  60% { transform: translate(-2px, -3px); }
+  80% { transform: translate(3px, 2px); }
+}
+
+.viewport__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 40%, rgb(255, 150, 40 / 0.5) 110%),
+    linear-gradient(to top, rgb(255, 60, 30 / 0.35), transparent 40%);
+  mix-blend-mode: screen;
+}
+.viewport__glow.is-descent {
+  opacity: 0.9;
+}
+.viewport__glow.is-ascent {
+  opacity: 0.55;
+  background:
+    radial-gradient(ellipse at 50% 70%, transparent 30%, rgb(180, 220, 255 / 0.4) 110%);
+}
+
 /* ==================== MODE BUTTON (viewport center bottom) ==================== */
 .modebtn {
   position: absolute;
@@ -588,4 +656,30 @@ body, canvas#app { cursor: crosshair; }
   left: 0; top: 9px;
   width: 4px; height: 1px;
   background: rgb(var(--fg) / 0.4);
+}
+.notes--samples .notes__title {
+  color: rgb(var(--green));
+  border-bottom-color: rgb(var(--green) / 0.4);
+}
+.notes--samples li {
+  color: rgb(var(--fg) / 0.72);
+}
+.notes--samples li strong {
+  color: rgb(var(--green));
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  margin-right: 6px;
+}
+.notes--samples li small {
+  display: block;
+  color: rgb(var(--fg) / 0.45);
+  margin-top: 2px;
+  letter-spacing: 0.25em;
+}
+@keyframes notes-pulse {
+  0% { background: rgb(var(--green) / 0.25); }
+  100% { background: transparent; }
+}
+.notes--pulse {
+  animation: notes-pulse 0.6s ease-out;
 }

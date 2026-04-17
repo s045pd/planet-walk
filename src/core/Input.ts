@@ -18,6 +18,7 @@ export type BindableKey =
   | 'Tab'
   | 'KeyM'
   | 'KeyF'
+  | 'KeyR'
   | 'Digit1'
   | 'Digit2'
   | 'Digit3'

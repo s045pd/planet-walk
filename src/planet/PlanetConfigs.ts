@@ -6,6 +6,10 @@ export interface PlanetSurfacePalette extends SurfacePalette {
   sunColor: Color;
   dustColor: Color;
   groundTint: Color;
+  nightTop: Color;
+  nightHorizon: Color;
+  sunsetTint: Color;
+  starVisibility: number;
   sunIntensity: number;
   ambientIntensity: number;
 }
@@ -41,16 +45,31 @@ export interface PlanetConfig {
 
 const rgb = (r: number, g: number, b: number): Color => new Color(r / 255, g / 255, b / 255);
 
-const surfacePalette = (
-  palette: BiomePalette,
-  opts: { detail: number; heightScale: number; sun: Color; dust: Color; ground: Color; sunI: number; ambI: number },
-): PlanetSurfacePalette => ({
+interface SurfacePaletteOpts {
+  detail: number;
+  heightScale: number;
+  sun: Color;
+  dust: Color;
+  ground: Color;
+  nightTop: Color;
+  nightHorizon: Color;
+  sunset: Color;
+  stars: number;
+  sunI: number;
+  ambI: number;
+}
+
+const surfacePalette = (palette: BiomePalette, opts: SurfacePaletteOpts): PlanetSurfacePalette => ({
   palette,
   detailShift: opts.detail,
   heightScale: opts.heightScale,
   sunColor: opts.sun,
   dustColor: opts.dust,
   groundTint: opts.ground,
+  nightTop: opts.nightTop,
+  nightHorizon: opts.nightHorizon,
+  sunsetTint: opts.sunset,
+  starVisibility: opts.stars,
   sunIntensity: opts.sunI,
   ambientIntensity: opts.ambI,
 });
@@ -84,7 +103,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
         highland: [0.30, 0.45, 0.22],
         basalt:   [0.32, 0.32, 0.30],
       },
-      { detail: 0.05, heightScale: 1.1, sun: rgb(255, 248, 235), dust: rgb(220, 225, 230), ground: rgb(45, 80, 50), sunI: 1.4, ambI: 0.55 },
+      {
+        detail: 0.05, heightScale: 1.1,
+        sun: rgb(255, 248, 235), dust: rgb(220, 225, 230), ground: rgb(45, 80, 50),
+        nightTop: rgb(3, 5, 15), nightHorizon: rgb(14, 22, 40),
+        sunset: rgb(255, 135, 70), stars: 0.7,
+        sunI: 1.4, ambI: 0.55,
+      },
     ),
     solLabel: 'UTC',
     landingSite: { lat: 27.988, lon: 86.925, name: 'Sagarmatha · Himalaya' },
@@ -118,7 +143,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
         highland: [0.72, 0.48, 0.30],
         basalt:   [0.40, 0.28, 0.20],
       },
-      { detail: 0.06, heightScale: 1.2, sun: rgb(255, 216, 175), dust: rgb(220, 150, 100), ground: rgb(90, 40, 20), sunI: 1.2, ambI: 0.45 },
+      {
+        detail: 0.06, heightScale: 1.2,
+        sun: rgb(255, 216, 175), dust: rgb(220, 150, 100), ground: rgb(90, 40, 20),
+        nightTop: rgb(3, 2, 5), nightHorizon: rgb(20, 14, 14),
+        sunset: rgb(90, 130, 220), stars: 0.85,
+        sunI: 1.2, ambI: 0.45,
+      },
     ),
     solLabel: 'LMST',
     landingSite: { lat: -14.502, lon: 175.83, name: 'Jezero Approach' },
@@ -152,7 +183,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
         highland: [0.66, 0.64, 0.58],
         basalt:   [0.32, 0.32, 0.30],
       },
-      { detail: 0.08, heightScale: 1.5, sun: rgb(255, 255, 245), dust: rgb(180, 180, 170), ground: rgb(60, 60, 60), sunI: 1.6, ambI: 0.12 },
+      {
+        detail: 0.08, heightScale: 1.5,
+        sun: rgb(255, 255, 245), dust: rgb(180, 180, 170), ground: rgb(60, 60, 60),
+        nightTop: rgb(0, 0, 0), nightHorizon: rgb(3, 3, 5),
+        sunset: rgb(80, 80, 90), stars: 1.0,
+        sunI: 1.6, ambI: 0.12,
+      },
     ),
     solLabel: 'UTC',
     landingSite: { lat: 0.673, lon: 23.473, name: 'Mare Tranquillitatis' },
@@ -186,7 +223,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
         highland: [0.88, 0.68, 0.38],
         basalt:   [0.40, 0.25, 0.12],
       },
-      { detail: 0.05, heightScale: 0.9, sun: rgb(255, 180, 90), dust: rgb(235, 185, 110), ground: rgb(120, 70, 20), sunI: 1.1, ambI: 0.75 },
+      {
+        detail: 0.05, heightScale: 0.9,
+        sun: rgb(255, 180, 90), dust: rgb(235, 185, 110), ground: rgb(120, 70, 20),
+        nightTop: rgb(40, 20, 10), nightHorizon: rgb(80, 45, 18),
+        sunset: rgb(255, 110, 40), stars: 0.0,
+        sunI: 1.1, ambI: 0.75,
+      },
     ),
     solLabel: 'VST',
     landingSite: { lat: 3.2, lon: 298.0, name: 'Ishtar Terra · Maxwell' },
@@ -220,7 +263,13 @@ export const PLANET_CONFIGS: PlanetConfig[] = [
         highland: [0.94, 0.96, 1.00],
         basalt:   [0.40, 0.52, 0.70],
       },
-      { detail: 0.06, heightScale: 0.6, sun: rgb(215, 225, 255), dust: rgb(180, 210, 245), ground: rgb(160, 190, 220), sunI: 0.8, ambI: 0.4 },
+      {
+        detail: 0.06, heightScale: 0.6,
+        sun: rgb(215, 225, 255), dust: rgb(180, 210, 245), ground: rgb(160, 190, 220),
+        nightTop: rgb(1, 2, 10), nightHorizon: rgb(6, 12, 28),
+        sunset: rgb(180, 200, 240), stars: 0.95,
+        sunI: 0.8, ambI: 0.4,
+      },
     ),
     solLabel: 'JST',
     landingSite: { lat: 12.5, lon: 180.0, name: 'Conamara Chaos' },

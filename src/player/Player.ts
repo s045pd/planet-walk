@@ -17,6 +17,9 @@ export interface PlayerSnapshot {
   heading: number;
   pitch: number;
   roll: number;
+  walking: boolean;
+  sprinting: boolean;
+  onGround: boolean;
 }
 
 export class Player {
@@ -37,6 +40,9 @@ export class Player {
   private config: PlanetConfig | null = null;
   private mode: 'orbit' | 'surface' = 'orbit';
   private surface: SurfaceScene | null = null;
+  private walking = false;
+  private sprinting = false;
+  private bobPhase = 0;
 
   constructor(camera: PerspectiveCamera, input: Input) {
     this.camera = camera;
@@ -104,6 +110,9 @@ export class Player {
         heading,
         pitch: (this.pitch * 180) / Math.PI,
         roll: 0,
+        walking: this.walking,
+        sprinting: this.sprinting,
+        onGround: this.onGround,
       };
     }
     const { lat, lon } = vec3ToLatLon(this.position);
@@ -120,6 +129,9 @@ export class Player {
       heading,
       pitch: (this.pitch * 180) / Math.PI,
       roll: 0,
+      walking: false,
+      sprinting: false,
+      onGround: this.onGround,
     };
   }
 
@@ -139,7 +151,8 @@ export class Player {
     if (this.input.isActive('left')) moveDir.sub(this.right);
     if (moveDir.lengthSq() > 0) moveDir.normalize();
 
-    const sprint = this.input.isActive('sprint') ? 2.2 : 1.0;
+    this.sprinting = this.input.isActive('sprint');
+    const sprint = this.sprinting ? 2.2 : 1.0;
     const speed = 6 * sprint;
     const tangent = new Vector3(this.velocity.x, 0, this.velocity.z);
     const target = moveDir.multiplyScalar(speed);
@@ -158,6 +171,15 @@ export class Player {
       this.onGround = true;
     } else {
       this.onGround = false;
+    }
+
+    const tangentSpeed = Math.hypot(tangent.x, tangent.z);
+    this.walking = tangentSpeed > 1.5 && this.onGround;
+    if (this.walking) {
+      const stride = this.sprinting ? 13 : 9;
+      this.bobPhase += delta * stride;
+    } else {
+      this.bobPhase *= Math.exp(-delta * 6);
     }
 
     this.applyPlanarCamera();
@@ -233,10 +255,16 @@ export class Player {
 
   private applyPlanarCamera(): void {
     this.camera.position.copy(this.position);
+    if (this.walking) {
+      const amp = this.sprinting ? 0.09 : 0.055;
+      const sway = this.sprinting ? 0.06 : 0.035;
+      this.camera.position.y += Math.sin(this.bobPhase) * amp;
+      this.camera.position.addScaledVector(this.right, Math.cos(this.bobPhase * 0.5) * sway);
+    }
     const look = this.forward.clone();
     const q = new Quaternion().setFromAxisAngle(this.right, this.pitch);
     look.applyQuaternion(q);
     this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(this.position.clone().add(look));
+    this.camera.lookAt(this.camera.position.clone().add(look));
   }
 }

@@ -8,6 +8,7 @@ import { DEFAULT_PLANET_ID, PLANET_CONFIGS, type PlanetConfig } from './planet/P
 import { OrbitCamera } from './player/OrbitCamera';
 import { Player } from './player/Player';
 import { SurfaceScene } from './surface/SurfaceScene';
+import type { SampleEntry } from './ui/Phase';
 import { HUD } from './ui/HUD';
 
 export class App {
@@ -26,6 +27,11 @@ export class App {
   private startTime = Date.now();
   private transitioning: 'landing' | 'ascent' | null = null;
   private transitionTimer: number | null = null;
+  private transitionDuration = 1.7;
+  private transitionElapsed = 0;
+  private baseFov = 55;
+  private samples: SampleEntry[] = [];
+  private sampleCounter = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas);
@@ -77,6 +83,8 @@ export class App {
       this.hud.worldSelect.close();
       if (this.mode === 'surface') this.input.exitPointerLock();
     });
+    this.input.onPress('KeyF', () => this.collectSample());
+    this.input.onPress('KeyR', () => this.resetSamples());
     const digits = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'] as const;
     digits.forEach((digit, i) => {
       this.input.onPress(digit, () => {
@@ -94,6 +102,8 @@ export class App {
 
   private startLanding(): void {
     this.transitioning = 'landing';
+    this.transitionElapsed = 0;
+    this.transitionDuration = 1.7;
     this.hud.setDescent(true, 'DESCENT · ENTRY INTERFACE');
     const site = this.planet.config.landingSite;
     const radius = this.planet.config.radius;
@@ -105,6 +115,8 @@ export class App {
     this.transitionTimer = window.setTimeout(() => {
       this.transitioning = null;
       this.hud.setDescent(false);
+      this.engine.camera.fov = this.baseFov;
+      this.engine.camera.updateProjectionMatrix();
       this.mode = 'surface';
       this.planet.root.visible = false;
       this.starfield.visible = false;
@@ -116,6 +128,8 @@ export class App {
 
   private startAscent(): void {
     this.transitioning = 'ascent';
+    this.transitionElapsed = 0;
+    this.transitionDuration = 1.4;
     this.hud.setDescent(true, 'ASCENT · ORBIT INSERTION');
     this.input.exitPointerLock();
     this.mode = 'orbit';
@@ -132,7 +146,33 @@ export class App {
     this.transitionTimer = window.setTimeout(() => {
       this.transitioning = null;
       this.hud.setDescent(false);
+      this.engine.camera.fov = this.baseFov;
+      this.engine.camera.updateProjectionMatrix();
     }, 1400);
+  }
+
+  private collectSample(): void {
+    if (this.mode !== 'surface' || this.transitioning) return;
+    const snap = this.player.snapshot();
+    const biome = this.surface.getBiomeAt(snap.position.x, snap.position.z);
+    const altitude = Math.round(snap.position.y * 10) / 10;
+    this.sampleCounter += 1;
+    const id = this.sampleCounter;
+    const biomeTitle = biome.charAt(0).toUpperCase() + biome.slice(1);
+    this.samples.push({
+      id,
+      label: `${biomeTitle} sample`,
+      detail: `+${altitude} m · hdg ${snap.heading.toFixed(0)}°`,
+    });
+    this.hud.phase.setSamples(this.samples);
+    this.hud.phase.pulse();
+  }
+
+  private resetSamples(): void {
+    if (this.samples.length === 0) return;
+    this.samples = [];
+    this.sampleCounter = 0;
+    this.hud.phase.setSamples(this.samples);
   }
 
   private switchPlanet(config: PlanetConfig): void {
@@ -165,8 +205,39 @@ export class App {
     } else {
       this.player.update(delta);
     }
-    this.surface.update(delta, this.player.snapshot().position);
-    this.hud.update(this.collectTelemetry());
+    if (this.transitioning) this.updateCinematic(delta);
+
+    const snap = this.player.snapshot();
+    this.surface.update(delta, {
+      position: snap.position,
+      walking: snap.walking,
+      sprinting: snap.sprinting,
+    });
+    const telemetry = this.collectTelemetry();
+    this.hud.update(telemetry);
+    this.hud.updateMinimap(
+      telemetry,
+      this.surface,
+      performance.now() / 1000,
+      snap.position.x,
+      snap.position.z,
+      snap.heading,
+    );
+  }
+
+  private updateCinematic(delta: number): void {
+    this.transitionElapsed = Math.min(this.transitionDuration, this.transitionElapsed + delta);
+    const t = this.transitionElapsed / this.transitionDuration;
+    const ease = Math.sin(t * Math.PI);
+    const fovDelta = this.transitioning === 'landing' ? -11 : 6;
+    this.engine.camera.fov = this.baseFov + ease * fovDelta;
+    this.engine.camera.updateProjectionMatrix();
+
+    if (this.transitioning === 'landing') {
+      const intensity = ease * 0.6;
+      this.engine.camera.position.x += (Math.random() - 0.5) * intensity;
+      this.engine.camera.position.y += (Math.random() - 0.5) * intensity;
+    }
   }
 
   private collectTelemetry(): Telemetry {
@@ -182,6 +253,9 @@ export class App {
 
     const memory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
     const memoryMB = memory ? memory.usedJSHeapSize / (1024 * 1024) : 0;
+
+    const dayInfo = this.surface.getDayInfo();
+    const surfaceLocal = this.mode === 'surface' ? `${dayInfo.localTime} ${dayInfo.phaseLabel}` : local;
 
     if (this.mode === 'orbit') {
       return {
@@ -216,7 +290,7 @@ export class App {
       pitch: snap.pitch,
       roll: snap.roll,
       sol,
-      localTime: local,
+      localTime: surfaceLocal,
       mode: 'surface',
       fps: this.engine.stats.fps,
       drawCalls: this.engine.stats.drawCalls,

@@ -1,6 +1,12 @@
 import type { Mode } from '../core/types';
 import type { PlanetConfig } from '../planet/PlanetConfigs';
 
+export interface SampleEntry {
+  id: number;
+  label: string;
+  detail: string;
+}
+
 const PHASES = [
   { id: 'orbit', label: 'ORBIT INSERTION' },
   { id: 'deorbit', label: 'DE-ORBIT BURN' },
@@ -16,6 +22,7 @@ export class Phase {
   private el: HTMLElement;
   private listEl: HTMLElement;
   private notesEl: HTMLElement;
+  private samplesEl: HTMLElement;
 
   constructor(parent: HTMLElement) {
     this.el = document.createElement('section');
@@ -28,10 +35,15 @@ export class Phase {
         <div class="notes__title">FIELD NOTES</div>
         <ul data-notes-list></ul>
       </div>
+      <div class="notes notes--samples" data-samples-wrap style="display:none">
+        <div class="notes__title">SAMPLES · [F]</div>
+        <ul data-samples-list></ul>
+      </div>
     `;
     parent.appendChild(this.el);
     this.listEl = this.el.querySelector('[data-phases]') as HTMLElement;
     this.notesEl = this.el.querySelector('[data-notes-list]') as HTMLElement;
+    this.samplesEl = this.el.querySelector('[data-samples-list]') as HTMLElement;
   }
 
   setMode(mode: Mode): void {
@@ -49,5 +61,21 @@ export class Phase {
 
   setConfig(config: PlanetConfig): void {
     this.notesEl.innerHTML = config.notes.map(n => `<li>${n}</li>`).join('');
+  }
+
+  setSamples(samples: SampleEntry[]): void {
+    const wrap = this.el.querySelector('[data-samples-wrap]') as HTMLElement;
+    wrap.style.display = samples.length > 0 ? 'block' : 'none';
+    this.samplesEl.innerHTML = samples
+      .slice(-5)
+      .reverse()
+      .map(s => `<li><strong>#${String(s.id).padStart(2, '0')}</strong> ${s.label} <small>${s.detail}</small></li>`)
+      .join('');
+  }
+
+  pulse(): void {
+    this.samplesEl.classList.remove('notes--pulse');
+    void this.samplesEl.offsetWidth;
+    this.samplesEl.classList.add('notes--pulse');
   }
 }

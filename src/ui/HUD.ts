@@ -1,6 +1,8 @@
 import type { Telemetry } from '../core/types';
 import { applyPaletteToBackground } from '../planet/Planet';
 import type { PlanetConfig } from '../planet/PlanetConfigs';
+import type { SurfaceScene } from '../surface/SurfaceScene';
+import { Minimap } from './Minimap';
 import { Phase } from './Phase';
 import { RightPanel } from './RightPanel';
 import { TelemetryStrip } from './Telemetry';
@@ -23,6 +25,8 @@ export class HUD {
   private targetPin: HTMLElement;
   private modeBtn: HTMLButtonElement;
   private descentEl: HTMLElement;
+  private glowEl: HTMLElement;
+  readonly minimap: Minimap;
   private activeConfig: PlanetConfig | null = null;
 
   constructor(onPick: (config: PlanetConfig) => void, onToggleMode: () => void) {
@@ -56,17 +60,20 @@ export class HUD {
       <div class="descent" data-descent>
         <div class="descent__label" data-descent-label>DESCENT · ENTRY INTERFACE</div>
       </div>
+      <div class="viewport__glow" data-glow></div>
     `;
     this.root.appendChild(this.viewport);
     this.targetPin = this.viewport.querySelector('[data-target]') as HTMLElement;
     this.modeBtn = this.viewport.querySelector('[data-modebtn]') as HTMLButtonElement;
     this.descentEl = this.viewport.querySelector('[data-descent]') as HTMLElement;
+    this.glowEl = this.viewport.querySelector('[data-glow]') as HTMLElement;
     this.modeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       onToggleMode();
     });
 
     this.right = new RightPanel(this.root);
+    this.minimap = new Minimap(this.root);
     this.telemetry = new TelemetryStrip(this.root);
 
     const legend = document.createElement('div');
@@ -143,5 +150,14 @@ export class HUD {
     const el = this.descentEl.querySelector('[data-descent-label]') as HTMLElement;
     el.textContent = label;
     this.modeBtn.style.visibility = active ? 'hidden' : 'visible';
+    this.viewport.classList.toggle('is-shaking', active);
+    const isAscent = label.startsWith('ASCENT');
+    this.glowEl.classList.toggle('is-descent', active && !isAscent);
+    this.glowEl.classList.toggle('is-ascent', active && isAscent);
+  }
+
+  updateMinimap(telemetry: Telemetry, surface: SurfaceScene, now: number, x: number, z: number, heading: number): void {
+    this.minimap.setLandmark(surface.getLandmarkLabel());
+    this.minimap.update(telemetry, surface, now, x, z, heading);
   }
 }
