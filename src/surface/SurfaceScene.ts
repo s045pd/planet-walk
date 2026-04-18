@@ -85,13 +85,21 @@ export class SurfaceScene {
     this.config = config;
     this.unloadMeshes();
 
+    // Build landmarks first so their heightField can be folded into the terrain
+    this.landmarks = new Landmarks(config, config.id.charCodeAt(0) * 9 + 11);
+    this.root.add(this.landmarks.root);
+
     this.terrain = new Terrain({
       size: this.options.size,
       segments: this.options.segments,
       seed: config.id.charCodeAt(0) + config.id.length * 13,
       palette: config.surfacePalette,
+      extraHeight: (x, z) => (this.landmarks ? this.landmarks.heightField(x, z) : 0),
     });
     this.root.add(this.terrain.root);
+
+    // now that terrain samples include landmark heights, reposition cap meshes atop peaks
+    this.landmarks.positionCapMeshes((x, z) => this.terrain!.getHeight(x, z));
 
     this.sky = new Sky({
       top: config.sky.top.clone(),
@@ -114,9 +122,6 @@ export class SurfaceScene {
       capacity: 180,
     });
     this.root.add(this.walkDust.points);
-
-    this.landmarks = new Landmarks(config, config.id.charCodeAt(0) * 9 + 11);
-    this.root.add(this.landmarks.root);
 
     this.hemi.color.copy(config.sky.horizon);
     this.hemi.groundColor.copy(config.surfacePalette.groundTint);

@@ -91,28 +91,61 @@ export class Landmarks {
   readonly root = new Group();
   private meshes: Mesh[] = [];
   private material: MeshStandardMaterial;
+  private specs: LandmarkSpec[];
+  private noise: SimplexNoise;
   readonly profile: LandmarkProfile;
 
   constructor(config: PlanetConfig, seed: number) {
     this.profile = profileOf(config.id);
-    const base = config.surface.mid.clone().multiplyScalar(this.profile.primary.colorScale);
+    this.specs = [this.profile.primary, ...this.profile.secondaries];
+    this.noise = new SimplexNoise(seed + 7);
+
+    const base = config.surface.high.clone().multiplyScalar(this.profile.primary.colorScale);
     this.material = new MeshStandardMaterial({
       color: base,
       roughness: 1.0,
       metalness: 0.0,
       flatShading: true,
-      emissive: config.surface.low.clone().multiplyScalar(0.08),
+      emissive: config.surface.low.clone().multiplyScalar(0.05),
     });
 
-    const noise = new SimplexNoise(seed + 7);
-    const specs: Array<[LandmarkSpec, number]> = [
-      [this.profile.primary, 1],
-      ...this.profile.secondaries.map((s): [LandmarkSpec, number] => [s, 0.85]),
-    ];
-    for (const [spec, variance] of specs) {
-      const mesh = this.buildMountain(spec, variance, noise);
+    // small rocky cap mesh atop each peak adds silhouette punch above the fbm terrain dome
+    for (const spec of this.specs) {
+      const mesh = this.buildCap(spec);
       this.meshes.push(mesh);
       this.root.add(mesh);
+    }
+  }
+
+  /**
+   * Contribution to ground height at (x, z) — quintic falloff within each peak's footprint.
+   * Summed with terrain fbm so landmarks become solid, walkable massifs.
+   */
+  heightField(x: number, z: number): number {
+    let total = 0;
+    for (const spec of this.specs) {
+      const dx = x - spec.offset.x;
+      const dz = z - spec.offset.z;
+      const d = Math.hypot(dx, dz);
+      if (d >= spec.radius) continue;
+      const t = 1 - d / spec.radius;
+      const smooth = t * t * (3 - 2 * t); // smoothstep
+      const jitter = 0.88 + this.noise.noise2D(x * 0.02, z * 0.02) * 0.12;
+      total += smooth * spec.height * 0.82 * jitter;
+    }
+    return total;
+  }
+
+  positionCapMeshes(heightAt: (x: number, z: number) => number): void {
+    for (let i = 0; i < this.specs.length; i++) {
+      const spec = this.specs[i];
+      const mesh = this.meshes[i];
+      if (!mesh) continue;
+      const terrainY = heightAt(spec.offset.x, spec.offset.z);
+      mesh.position.x = spec.offset.x;
+      mesh.position.z = spec.offset.z;
+      // cap sits so its tip pokes a bit above the terrain dome peak
+      mesh.position.y = terrainY - spec.height * 0.18;
     }
   }
 
@@ -124,25 +157,24 @@ export class Landmarks {
     this.root.clear();
   }
 
-  private buildMountain(spec: LandmarkSpec, variance: number, noise: SimplexNoise): Mesh {
-    const segs = 16;
-    const geo = new ConeGeometry(spec.radius, spec.height, segs, 5, false);
+  private buildCap(spec: LandmarkSpec): Mesh {
+    const capHeight = spec.height * 0.55;
+    const capRadius = spec.radius * 0.35;
+    const geo = new ConeGeometry(capRadius, capHeight, 12, 3, false);
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const y = pos.getY(i);
       const z = pos.getZ(i);
-      const n = noise.fbm(x * 0.03, z * 0.03, 3, 2, 0.5) * variance * spec.radius * 0.12;
+      const n = this.noise.fbm(x * 0.04, z * 0.04, 3, 2, 0.5) * capRadius * 0.18;
       pos.setX(i, x + n * 0.6);
       pos.setZ(i, z + n * 0.6);
-      if (y > -spec.height * 0.45) pos.setY(i, y + n * 0.25);
+      if (y > -capHeight * 0.4) pos.setY(i, y + n * 0.3);
     }
     pos.needsUpdate = true;
     geo.computeVertexNormals();
 
     const mesh = new Mesh(geo, this.material);
-    mesh.position.copy(spec.offset);
-    mesh.position.y = spec.height / 2 - 12;
     mesh.rotation.z = spec.tilt;
     mesh.rotation.y = Math.random() * Math.PI;
     return mesh;

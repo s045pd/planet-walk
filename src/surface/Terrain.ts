@@ -18,6 +18,7 @@ export interface TerrainOptions {
   segments: number;
   seed: number;
   palette: SurfacePalette;
+  extraHeight?: (x: number, z: number) => number;
 }
 
 export class Terrain {
@@ -43,7 +44,9 @@ export class Terrain {
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
-      const h = heightAt(this.noise, x, z, this.biomes);
+      const baseH = heightAt(this.noise, x, z, this.biomes);
+      const extra = options.extraHeight ? options.extraHeight(x, z) : 0;
+      const h = baseH + extra;
       pos.setY(i, h);
 
       const id = biomeAt(this.noise, x, z);
@@ -52,7 +55,9 @@ export class Terrain {
       tmp.r = def.color.r + (def.detail.r - def.color.r) * d;
       tmp.g = def.color.g + (def.detail.g - def.color.g) * d;
       tmp.b = def.color.b + (def.detail.b - def.color.b) * d;
-      const shade = Math.max(0.75, Math.min(1.25, 1 + h * 0.012));
+      // darken high-elevation landmark faces for drama
+      const elevationTint = extra > 1 ? Math.max(0.55, 1 - extra * 0.008) : 1;
+      const shade = Math.max(0.75, Math.min(1.25, 1 + h * 0.012)) * elevationTint;
       colors[i * 3 + 0] = tmp.r * shade;
       colors[i * 3 + 1] = tmp.g * shade;
       colors[i * 3 + 2] = tmp.b * shade;
@@ -79,7 +84,9 @@ export class Terrain {
     const half = this.options.size / 2;
     const cx = Math.max(-half, Math.min(half, x));
     const cz = Math.max(-half, Math.min(half, z));
-    return heightAt(this.noise, cx, cz, this.biomes);
+    let h = heightAt(this.noise, cx, cz, this.biomes);
+    if (this.options.extraHeight) h += this.options.extraHeight(cx, cz);
+    return h;
   }
 
   dispose(): void {
