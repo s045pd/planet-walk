@@ -10,15 +10,16 @@ import {
 
 import type { PlanetConfig } from '../planet/PlanetConfigs';
 import { biomeAt } from './Biomes';
+import { ChunkManager } from './ChunkManager';
 import { Dust } from './Dust';
 import { Landmarks } from './Landmarks';
 import { Sky, type SkyPhase } from './Sky';
-import { Terrain } from './Terrain';
 import { WalkDust } from './WalkDust';
 
 export interface SurfaceSceneOptions {
-  size: number;
-  segments: number;
+  chunkSize: number;
+  chunkSegments: number;
+  viewDistance: number;
 }
 
 export interface SurfaceUpdateInput {
@@ -41,7 +42,7 @@ const DAY_CYCLE_SECONDS = 300;
 export class SurfaceScene {
   readonly root = new Object3D();
   private scene: Scene;
-  private terrain: Terrain | null = null;
+  private chunks: ChunkManager | null = null;
   private sky: Sky | null = null;
   private dust: Dust | null = null;
   private walkDust: WalkDust | null = null;
@@ -57,6 +58,7 @@ export class SurfaceScene {
   private skyTopTmp = new Color();
   private skyHorizonTmp = new Color();
   private sunColorTmp = new Color();
+  private viewRadiusWorld: number;
   private dayInfo: DayInfo = {
     sunAltitude: 1,
     dayFactor: 1,
@@ -69,6 +71,7 @@ export class SurfaceScene {
   constructor(scene: Scene, options: SurfaceSceneOptions) {
     this.scene = scene;
     this.options = options;
+    this.viewRadiusWorld = options.chunkSize * (options.viewDistance + 0.5);
 
     this.sun = new DirectionalLight(0xffffff, 1.4);
     this.sun.position.set(50, 80, 40);
@@ -85,28 +88,28 @@ export class SurfaceScene {
     this.config = config;
     this.unloadMeshes();
 
-    // Build landmarks first so their heightField can be folded into the terrain
     this.landmarks = new Landmarks(config, config.id.charCodeAt(0) * 9 + 11);
     this.root.add(this.landmarks.root);
 
-    this.terrain = new Terrain({
-      size: this.options.size,
-      segments: this.options.segments,
+    this.chunks = new ChunkManager({
+      chunkSize: this.options.chunkSize,
+      chunkSegments: this.options.chunkSegments,
+      viewDistance: this.options.viewDistance,
       seed: config.id.charCodeAt(0) + config.id.length * 13,
       palette: config.surfacePalette,
       extraHeight: (x, z) => (this.landmarks ? this.landmarks.heightField(x, z) : 0),
     });
-    this.root.add(this.terrain.root);
+    this.chunks.preload(0, 0);
+    this.root.add(this.chunks.root);
 
-    // now that terrain samples include landmark heights, reposition cap meshes atop peaks
-    this.landmarks.positionCapMeshes((x, z) => this.terrain!.getHeight(x, z));
+    this.landmarks.positionCapMeshes((x, z) => this.chunks!.getHeightAt(x, z));
 
     this.sky = new Sky({
       top: config.sky.top.clone(),
       horizon: config.sky.horizon.clone(),
       sunColor: config.surfacePalette.sunColor.clone(),
       sunDir: [0.4, 0.8, 0.2],
-      radius: this.options.size * 2.2,
+      radius: this.viewRadiusWorld * 2.0,
     });
     this.root.add(this.sky.mesh);
 
@@ -131,12 +134,12 @@ export class SurfaceScene {
   }
 
   getHeightAt(x: number, z: number): number {
-    return this.terrain ? this.terrain.getHeight(x, z) : 0;
+    return this.chunks ? this.chunks.getHeightAt(x, z) : 0;
   }
 
   getBiomeAt(x: number, z: number): string {
-    if (!this.terrain) return 'unknown';
-    return biomeAt(this.terrain.noise, x, z);
+    if (!this.chunks) return 'unknown';
+    return biomeAt(this.chunks.noise, x, z);
   }
 
   getDayInfo(): Readonly<DayInfo> {
@@ -148,7 +151,7 @@ export class SurfaceScene {
     this.prevBg = this.scene.background as Color | null;
     this.prevFog = this.scene.fog as Fog | null | undefined;
     this.scene.background = this.config.sky.horizon.clone();
-    this.scene.fog = new Fog(this.config.sky.horizon.clone().getHex(), 60, this.options.size * 0.95);
+    this.scene.fog = new Fog(this.config.sky.horizon.clone().getHex(), 60, this.viewRadiusWorld * 0.9);
     this.root.visible = true;
   }
 
@@ -160,6 +163,8 @@ export class SurfaceScene {
 
   update(delta: number, input: SurfaceUpdateInput): void {
     if (!this.root.visible || !this.config) return;
+
+    if (this.chunks) this.chunks.update(input.position.x, input.position.z);
 
     this.cycleTime = (this.cycleTime + delta) % DAY_CYCLE_SECONDS;
     const t = this.cycleTime / DAY_CYCLE_SECONDS;
@@ -212,6 +217,9 @@ export class SurfaceScene {
     this.sun.target.position.copy(p);
     this.sun.target.updateMatrixWorld();
 
+    // sky dome follows the player so it never runs out of bounds on an infinite walk
+    if (this.sky) this.sky.mesh.position.set(p.x, 0, p.z);
+
     this.fogColorHolder.copy(this.skyHorizonTmp);
     this.scene.background = this.fogColorHolder.clone();
     if (this.scene.fog instanceof Fog) this.scene.fog.color.copy(this.fogColorHolder);
@@ -247,7 +255,7 @@ export class SurfaceScene {
   }
 
   private unloadMeshes(): void {
-    if (this.terrain) { this.root.remove(this.terrain.root); this.terrain.dispose(); this.terrain = null; }
+    if (this.chunks) { this.root.remove(this.chunks.root); this.chunks.dispose(); this.chunks = null; }
     if (this.sky) { this.root.remove(this.sky.mesh); this.sky.dispose(); this.sky = null; }
     if (this.dust) { this.root.remove(this.dust.points); this.dust.dispose(); this.dust = null; }
     if (this.walkDust) { this.root.remove(this.walkDust.points); this.walkDust.dispose(); this.walkDust = null; }

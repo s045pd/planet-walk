@@ -54,7 +54,11 @@ export class App {
     this.player = new Player(this.engine.camera, this.input);
     this.player.setConfig(startConfig);
 
-    this.surface = new SurfaceScene(this.engine.scene, { size: 900, segments: 192 });
+    this.surface = new SurfaceScene(this.engine.scene, {
+      chunkSize: 128,
+      chunkSegments: 48,
+      viewDistance: 3,
+    });
     this.engine.scene.add(this.surface.root);
     this.surface.load(startConfig);
 
