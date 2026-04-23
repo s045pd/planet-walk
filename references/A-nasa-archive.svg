@@ -1,0 +1,208 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" font-family="'Times New Roman', 'IBM Plex Serif', serif">
+  <defs>
+    <radialGradient id="planet-a" cx="40%" cy="35%">
+      <stop offset="0%" stop-color="#E8D4A8"/>
+      <stop offset="35%" stop-color="#B8894A"/>
+      <stop offset="75%" stop-color="#4A2818"/>
+      <stop offset="100%" stop-color="#1A0A04"/>
+    </radialGradient>
+    <radialGradient id="atmo-a" cx="50%" cy="50%">
+      <stop offset="80%" stop-color="#FC3D21" stop-opacity="0"/>
+      <stop offset="95%" stop-color="#FC3D21" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FC3D21" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grain-a" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="#0A0806"/>
+      <circle cx="1" cy="1" r="0.3" fill="#F5F1E8" opacity="0.04"/>
+    </pattern>
+    <pattern id="grid-a" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
+      <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#F5F1E8" stroke-width="0.3" opacity="0.08"/>
+    </pattern>
+    <filter id="noise">
+      <feTurbulence baseFrequency="0.9" numOctaves="2" seed="7"/>
+      <feColorMatrix values="0 0 0 0 0.96 0 0 0 0 0.94 0 0 0 0 0.91 0 0 0 0.06 0"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
+  </defs>
+
+  <!-- base -->
+  <rect width="1440" height="900" fill="url(#grain-a)"/>
+  <rect width="1440" height="900" fill="url(#grid-a)"/>
+
+  <!-- top masthead -->
+  <g>
+    <line x1="40" y1="58" x2="1400" y2="58" stroke="#F5F1E8" stroke-width="0.5" opacity="0.5"/>
+    <text x="40" y="48" fill="#F5F1E8" font-size="11" letter-spacing="3" font-family="'Courier New', monospace">TRANSMISSION Nº 00472 / ARCHIVE FOLIO 014.ε</text>
+    <text x="1400" y="48" fill="#F5F1E8" font-size="11" letter-spacing="3" text-anchor="end" font-family="'Courier New', monospace">2026.04.17 · 14:32:07 UTC · LAT −14.502° / LON +175.830°</text>
+    <line x1="40" y1="62" x2="1400" y2="62" stroke="#F5F1E8" stroke-width="0.5" opacity="0.5"/>
+  </g>
+
+  <!-- title -->
+  <g>
+    <text x="40" y="155" fill="#F5F1E8" font-size="96" font-style="italic" letter-spacing="-2">Planet</text>
+    <text x="40" y="235" fill="#F5F1E8" font-size="96" font-style="italic" letter-spacing="-2">Walk.</text>
+    <text x="40" y="275" fill="#FC3D21" font-size="11" letter-spacing="6" font-family="'Courier New', monospace">— A FIELD SURVEY OF WORLDS, ON FOOT —</text>
+    <line x1="40" y1="298" x2="340" y2="298" stroke="#F5F1E8" stroke-width="1"/>
+  </g>
+
+  <!-- left column: body text + planet index -->
+  <g font-family="'Times New Roman', serif">
+    <text x="40" y="330" fill="#F5F1E8" font-size="10" letter-spacing="4" font-family="'Courier New', monospace">CATALOGUE</text>
+    <line x1="40" y1="340" x2="340" y2="340" stroke="#F5F1E8" stroke-width="0.3" opacity="0.4"/>
+
+    <!-- planet list -->
+    <g fill="#F5F1E8">
+      <text x="40" y="378" font-size="10" font-family="'Courier New', monospace" opacity="0.5">001</text>
+      <text x="90" y="378" font-size="17" font-style="italic">Terra</text>
+      <text x="300" y="378" font-size="10" font-family="'Courier New', monospace" text-anchor="end" opacity="0.5">— 9.81 m·s⁻²</text>
+
+      <rect x="36" y="395" width="304" height="38" fill="#F5F1E8" opacity="0.06"/>
+      <text x="40" y="418" font-size="10" font-family="'Courier New', monospace" fill="#FC3D21">002</text>
+      <text x="90" y="418" font-size="17" font-style="italic" fill="#FC3D21">Mars ▸</text>
+      <text x="300" y="418" font-size="10" font-family="'Courier New', monospace" text-anchor="end" fill="#FC3D21">— 3.72 m·s⁻² ●</text>
+
+      <text x="40" y="458" font-size="10" font-family="'Courier New', monospace" opacity="0.5">003</text>
+      <text x="90" y="458" font-size="17" font-style="italic">Luna</text>
+      <text x="300" y="458" font-size="10" font-family="'Courier New', monospace" text-anchor="end" opacity="0.5">— 1.62 m·s⁻²</text>
+
+      <text x="40" y="498" font-size="10" font-family="'Courier New', monospace" opacity="0.5">004</text>
+      <text x="90" y="498" font-size="17" font-style="italic">Venus</text>
+      <text x="300" y="498" font-size="10" font-family="'Courier New', monospace" text-anchor="end" opacity="0.5">— 8.87 m·s⁻²</text>
+
+      <text x="40" y="538" font-size="10" font-family="'Courier New', monospace" opacity="0.5">005</text>
+      <text x="90" y="538" font-size="17" font-style="italic">Europa</text>
+      <text x="300" y="538" font-size="10" font-family="'Courier New', monospace" text-anchor="end" opacity="0.5">— 1.31 m·s⁻²</text>
+    </g>
+
+    <!-- editorial body -->
+    <g fill="#F5F1E8" opacity="0.82">
+      <text x="40" y="600" font-size="10" letter-spacing="4" font-family="'Courier New', monospace" opacity="1">§ FROM THE NOTEBOOK</text>
+      <line x1="40" y1="610" x2="340" y2="610" stroke="#F5F1E8" stroke-width="0.3" opacity="0.4"/>
+      <text x="40" y="642" font-size="14" font-style="italic">The red valley at 14°S smells of iron</text>
+      <text x="40" y="660" font-size="14" font-style="italic">and silence. The sky is a rust-colored</text>
+      <text x="40" y="678" font-size="14" font-style="italic">page. We are small, and the wind is</text>
+      <text x="40" y="696" font-size="14" font-style="italic">old.</text>
+      <text x="40" y="735" font-size="11" opacity="0.7" font-family="'Courier New', monospace">— Field note, Sol 47</text>
+    </g>
+  </g>
+
+  <!-- center: planet render with scientific annotation -->
+  <g transform="translate(720,480)">
+    <circle r="310" fill="url(#atmo-a)"/>
+    <circle r="260" fill="url(#planet-a)"/>
+    <!-- surface texture hints -->
+    <ellipse cx="-80" cy="-60" rx="70" ry="18" fill="#3A1608" opacity="0.5"/>
+    <ellipse cx="50" cy="80" rx="110" ry="26" fill="#3A1608" opacity="0.4"/>
+    <ellipse cx="-140" cy="110" rx="40" ry="12" fill="#6B3820" opacity="0.5"/>
+    <circle cx="80" cy="-130" r="30" fill="#2A1008" opacity="0.6"/>
+
+    <!-- scientific crosshair -->
+    <circle r="260" fill="none" stroke="#F5F1E8" stroke-width="0.5" opacity="0.35" stroke-dasharray="2 4"/>
+    <circle r="320" fill="none" stroke="#FC3D21" stroke-width="0.5" opacity="0.4"/>
+    <line x1="-340" y1="0" x2="340" y2="0" stroke="#F5F1E8" stroke-width="0.3" opacity="0.3"/>
+    <line x1="0" y1="-340" x2="0" y2="340" stroke="#F5F1E8" stroke-width="0.3" opacity="0.3"/>
+
+    <!-- annotation pins -->
+    <g font-family="'Courier New', monospace" fill="#F5F1E8">
+      <circle cx="-95" cy="-75" r="3" fill="none" stroke="#FC3D21" stroke-width="1"/>
+      <line x1="-95" y1="-75" x2="-260" y2="-175" stroke="#FC3D21" stroke-width="0.5"/>
+      <line x1="-260" y1="-175" x2="-380" y2="-175" stroke="#FC3D21" stroke-width="0.5"/>
+      <text x="-380" y="-180" font-size="10" text-anchor="end" fill="#FC3D21">A · Valles Marineris</text>
+      <text x="-380" y="-165" font-size="9" text-anchor="end" opacity="0.7">depth 7,000 m</text>
+
+      <circle cx="140" cy="-90" r="3" fill="none" stroke="#FC3D21" stroke-width="1"/>
+      <line x1="140" y1="-90" x2="300" y2="-190" stroke="#FC3D21" stroke-width="0.5"/>
+      <line x1="300" y1="-190" x2="420" y2="-190" stroke="#FC3D21" stroke-width="0.5"/>
+      <text x="420" y="-195" font-size="10" fill="#FC3D21">B · Olympus Mons</text>
+      <text x="420" y="-180" font-size="9" opacity="0.7">altitude 21,229 m</text>
+
+      <circle cx="0" cy="170" r="4" fill="#FFB81C"/>
+      <line x1="0" y1="170" x2="200" y2="280" stroke="#FFB81C" stroke-width="0.5"/>
+      <line x1="200" y1="280" x2="400" y2="280" stroke="#FFB81C" stroke-width="0.5"/>
+      <text x="400" y="275" font-size="10" fill="#FFB81C">▸ YOU ARE HERE</text>
+      <text x="400" y="290" font-size="9" opacity="0.9" fill="#FFB81C">14.502°S · 175.830°E · +2,847 m</text>
+    </g>
+
+    <!-- scale -->
+    <g transform="translate(-330,280)" font-family="'Courier New', monospace" fill="#F5F1E8">
+      <line x1="0" y1="0" x2="120" y2="0" stroke="#F5F1E8" stroke-width="1"/>
+      <line x1="0" y1="-4" x2="0" y2="4" stroke="#F5F1E8"/>
+      <line x1="60" y1="-3" x2="60" y2="3" stroke="#F5F1E8"/>
+      <line x1="120" y1="-4" x2="120" y2="4" stroke="#F5F1E8"/>
+      <text x="0" y="-10" font-size="9">0</text>
+      <text x="60" y="-10" font-size="9" text-anchor="middle">1,692</text>
+      <text x="120" y="-10" font-size="9" text-anchor="end">3,389 km</text>
+    </g>
+
+    <text x="0" y="-340" font-size="10" letter-spacing="4" text-anchor="middle" fill="#F5F1E8" font-family="'Courier New', monospace" opacity="0.7">PLATE II · MARS · NORTHERN ASPECT · 1:4.7×10⁷</text>
+  </g>
+
+  <!-- right column: telemetry -->
+  <g transform="translate(1120,320)" font-family="'Courier New', monospace">
+    <text x="0" y="0" fill="#F5F1E8" font-size="10" letter-spacing="4">TELEMETRY</text>
+    <line x1="0" y1="10" x2="280" y2="10" stroke="#F5F1E8" stroke-width="0.3" opacity="0.4"/>
+
+    <g fill="#F5F1E8" font-size="10">
+      <text x="0" y="38" opacity="0.6">LATITUDE</text>
+      <text x="280" y="38" text-anchor="end" font-size="18" font-style="italic" font-family="'Times New Roman', serif">−14.502°</text>
+      <line x1="0" y1="50" x2="280" y2="50" stroke="#F5F1E8" stroke-width="0.2" opacity="0.25"/>
+
+      <text x="0" y="78" opacity="0.6">LONGITUDE</text>
+      <text x="280" y="78" text-anchor="end" font-size="18" font-style="italic" font-family="'Times New Roman', serif">+175.830°</text>
+      <line x1="0" y1="90" x2="280" y2="90" stroke="#F5F1E8" stroke-width="0.2" opacity="0.25"/>
+
+      <text x="0" y="118" opacity="0.6">ELEVATION</text>
+      <text x="280" y="118" text-anchor="end" font-size="18" font-style="italic" font-family="'Times New Roman', serif">+2,847<tspan font-size="10" opacity="0.6"> m</tspan></text>
+      <line x1="0" y1="130" x2="280" y2="130" stroke="#F5F1E8" stroke-width="0.2" opacity="0.25"/>
+
+      <text x="0" y="158" opacity="0.6">VELOCITY</text>
+      <text x="280" y="158" text-anchor="end" font-size="18" font-style="italic" font-family="'Times New Roman', serif">4.2<tspan font-size="10" opacity="0.6"> m·s⁻¹</tspan></text>
+      <line x1="0" y1="170" x2="280" y2="170" stroke="#F5F1E8" stroke-width="0.2" opacity="0.25"/>
+
+      <text x="0" y="198" opacity="0.6">SOL</text>
+      <text x="280" y="198" text-anchor="end" font-size="18" font-style="italic" font-family="'Times New Roman', serif">47<tspan font-size="10" opacity="0.6"> · 12:41 LMST</tspan></text>
+    </g>
+
+    <!-- frame -->
+    <g transform="translate(0,240)">
+      <text x="0" y="0" fill="#F5F1E8" font-size="10" letter-spacing="4">FRAME</text>
+      <line x1="0" y1="10" x2="280" y2="10" stroke="#F5F1E8" stroke-width="0.3" opacity="0.4"/>
+      <g fill="#F5F1E8" font-size="11">
+        <text x="0" y="34">FPS</text><text x="280" y="34" text-anchor="end" fill="#7FD484">60.0</text>
+        <text x="0" y="52">LOD NODES</text><text x="280" y="52" text-anchor="end">1,284</text>
+        <text x="0" y="70">MEMORY</text><text x="280" y="70" text-anchor="end">142 MB</text>
+        <text x="0" y="88">DRAW CALLS</text><text x="280" y="88" text-anchor="end">87</text>
+      </g>
+    </g>
+
+    <!-- compass -->
+    <g transform="translate(140,430)">
+      <circle r="55" fill="none" stroke="#F5F1E8" stroke-width="0.5" opacity="0.4"/>
+      <circle r="40" fill="none" stroke="#F5F1E8" stroke-width="0.3" opacity="0.25"/>
+      <text x="0" y="-62" font-size="10" text-anchor="middle" fill="#FC3D21">N</text>
+      <text x="62" y="4" font-size="10" text-anchor="middle" fill="#F5F1E8" opacity="0.5">E</text>
+      <text x="0" y="70" font-size="10" text-anchor="middle" fill="#F5F1E8" opacity="0.5">S</text>
+      <text x="-62" y="4" font-size="10" text-anchor="middle" fill="#F5F1E8" opacity="0.5">W</text>
+      <polygon points="0,-48 -5,0 0,-4 5,0" fill="#FC3D21"/>
+      <polygon points="0,48 -5,0 0,4 5,0" fill="#F5F1E8" opacity="0.7"/>
+      <text x="0" y="92" font-size="9" text-anchor="middle" fill="#F5F1E8" opacity="0.6">HDG 042.7°</text>
+    </g>
+  </g>
+
+  <!-- bottom control bar -->
+  <g transform="translate(0,840)">
+    <line x1="40" y1="0" x2="1400" y2="0" stroke="#F5F1E8" stroke-width="0.5" opacity="0.5"/>
+    <g font-family="'Courier New', monospace" fill="#F5F1E8" font-size="10" letter-spacing="2">
+      <text x="40" y="22">[W/A/S/D] STRIDE</text>
+      <text x="210" y="22">[␣] JUMP</text>
+      <text x="310" y="22">[MOUSE] GAZE</text>
+      <text x="450" y="22">[TAB] ORBIT ⇄ SURFACE</text>
+      <text x="650" y="22">[M] CATALOGUE</text>
+      <text x="800" y="22">[F] FIELD NOTE</text>
+      <text x="1400" y="22" text-anchor="end" fill="#FC3D21">● REC · SOL 47</text>
+    </g>
+  </g>
+
+  <!-- page numeral -->
+  <text x="1400" y="155" font-size="120" font-style="italic" text-anchor="end" fill="#F5F1E8" opacity="0.08" font-family="'Times New Roman', serif">II</text>
+</svg>

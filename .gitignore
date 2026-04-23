@@ -1,6 +1,8 @@
 node_modules/
 dist/
 *.log
+.claude/
+IMPLEMENTATION_PLAN.md
 
 # 大纹理文件（用 npm run textures:download 下载）
 public/assets/textures/**/*.jpg

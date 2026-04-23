@@ -1,17 +1,39 @@
-/** 所有需要每帧更新的子系统实现此接口 */
-export interface IUpdatable {
+import type { Vector3 } from 'three';
+
+export type Mode = 'orbit' | 'surface';
+
+export interface FlightPhase {
+  id: string;
+  label: string;
+  state: 'done' | 'active' | 'pending';
+}
+
+export interface Telemetry {
+  worldId: string;
+  worldName: string;
+  lat: number;
+  lon: number;
+  altitude: number;
+  velocity: number;
+  gravity: number;
+  heading: number;
+  pitch: number;
+  roll: number;
+  sol: number;
+  localTime: string;
+  mode: Mode;
+  fps: number;
+  drawCalls: number;
+  memoryMB: number;
+}
+
+export interface Updatable {
   update(delta: number): void;
 }
 
-/** 可销毁资源接口 */
-export interface IDisposable {
-  dispose(): void;
-}
-
-/** 引擎配置 */
-export interface EngineConfig {
-  canvas: HTMLCanvasElement;
-  antialias: boolean;
-  logarithmicDepthBuffer: boolean;
-  pixelRatio: number;
+export interface PlayerPose {
+  position: Vector3;
+  forward: Vector3;
+  up: Vector3;
+  velocity: Vector3;
 }
