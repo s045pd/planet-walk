@@ -19,6 +19,8 @@ export type BindableKey =
   | 'KeyM'
   | 'KeyF'
   | 'KeyR'
+  | 'KeyK'
+  | 'Space'
   | 'Digit1'
   | 'Digit2'
   | 'Digit3'

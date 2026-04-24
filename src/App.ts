@@ -7,6 +7,7 @@ import { Planet, createStarfield } from './planet/Planet';
 import { DEFAULT_PLANET_ID, PLANET_CONFIGS, type PlanetConfig } from './planet/PlanetConfigs';
 import { OrbitCamera } from './player/OrbitCamera';
 import { Player } from './player/Player';
+import { AudioManager } from './audio/AudioManager';
 import { SurfaceScene } from './surface/SurfaceScene';
 import type { SampleEntry } from './ui/Phase';
 import { HUD } from './ui/HUD';
@@ -33,6 +34,8 @@ export class App {
   private baseFov = 55;
   private samples: SampleEntry[] = [];
   private sampleCounter = 0;
+  private audio = new AudioManager();
+  private lastOnGround = true;
 
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas);
@@ -75,6 +78,15 @@ export class App {
       onOpenWorlds: () => this.hud.worldSelect.toggle(),
     });
 
+    // Web Audio requires a user gesture to start.
+    const resumeAudio = (): void => {
+      this.audio.ensure();
+      this.audio.resume();
+      this.audio.setPlanet(this.planet.config.id);
+    };
+    canvas.addEventListener('pointerdown', resumeAudio);
+    window.addEventListener('keydown', resumeAudio);
+
     this.bindKeys();
 
     this.engine.register({ update: (delta) => this.update(delta) });
@@ -96,6 +108,13 @@ export class App {
     });
     this.input.onPress('KeyF', () => this.collectSample());
     this.input.onPress('KeyR', () => this.resetSamples());
+    this.input.onPress('Space', () => {
+      if (this.mode === 'surface' && this.lastOnGround) this.audio.jump();
+    });
+    this.input.onPress('KeyK', () => {
+      this.audio.setMuted(!this.audio.isMuted());
+      this.hud.setAudioMuted(this.audio.isMuted());
+    });
     const digits = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'] as const;
     digits.forEach((digit, i) => {
       this.input.onPress(digit, () => {
@@ -116,6 +135,7 @@ export class App {
     this.transitionElapsed = 0;
     this.transitionDuration = 1.7;
     this.hud.setDescent(true, 'DESCENT · ENTRY INTERFACE');
+    this.audio.descentRumble();
     const site = this.planet.config.landingSite;
     const radius = this.planet.config.radius;
     this.orbit.setDesired({
@@ -134,6 +154,8 @@ export class App {
       this.surface.activate();
       this.player.enterSurface(this.surface);
       this.input.requestPointerLock();
+      this.audio.setSurfaceMode(true);
+      this.audio.land(0.9);
     }, 1700);
   }
 
@@ -142,6 +164,8 @@ export class App {
     this.transitionElapsed = 0;
     this.transitionDuration = 1.4;
     this.hud.setDescent(true, 'ASCENT · ORBIT INSERTION');
+    this.audio.descentRumble();
+    this.audio.setSurfaceMode(false);
     this.input.exitPointerLock();
     this.mode = 'orbit';
     this.planet.root.visible = true;
@@ -177,6 +201,7 @@ export class App {
     });
     this.hud.phase.setSamples(this.samples);
     this.hud.phase.pulse();
+    this.audio.sample();
   }
 
   private resetSamples(): void {
@@ -207,6 +232,8 @@ export class App {
     this.player.setConfig(config);
     this.surface.load(config);
     this.hud.setConfig(config);
+    this.audio.setPlanet(config.id);
+    this.audio.setSurfaceMode(false);
   }
 
   private update(delta: number): void {
@@ -224,6 +251,11 @@ export class App {
       walking: snap.walking,
       sprinting: snap.sprinting,
     });
+    this.audio.update(delta, snap.walking, snap.sprinting, snap.onGround);
+    if (this.mode === 'surface' && !this.lastOnGround && snap.onGround) {
+      this.audio.land(Math.min(1, 0.4 + snap.speed * 0.08));
+    }
+    this.lastOnGround = snap.onGround;
     const telemetry = this.collectTelemetry();
     this.hud.update(telemetry);
     this.hud.updateMinimap(

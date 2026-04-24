@@ -26,6 +26,7 @@ export class HUD {
   private modeBtn: HTMLButtonElement;
   private descentEl: HTMLElement;
   private glowEl: HTMLElement;
+  private audioStateEl!: HTMLElement;
   readonly minimap: Minimap;
   private activeConfig: PlanetConfig | null = null;
 
@@ -85,10 +86,14 @@ export class HUD {
         <span><kbd>MOUSE</kbd>GAZE</span>
         <span><kbd>TAB</kbd>ORBIT / SURFACE</span>
         <span><kbd>M</kbd>WORLDS</span>
+        <span><kbd>F</kbd>SAMPLE</span>
+        <span><kbd>K</kbd>AUDIO <span data-audio-state>●</span></span>
       </div>
       <div>PLANET·WALK / 2026 · S045PD</div>
     `;
     this.root.appendChild(legend);
+    this.audioStateEl = legend.querySelector('[data-audio-state]') as HTMLElement;
+    this.setAudioMuted(false);
 
     this.worldSelect = new WorldSelect(document.body, onPick);
   }
@@ -159,5 +164,11 @@ export class HUD {
   updateMinimap(telemetry: Telemetry, surface: SurfaceScene, now: number, x: number, z: number, heading: number): void {
     this.minimap.setLandmark(surface.getLandmarkLabel());
     this.minimap.update(telemetry, surface, now, x, z, heading);
+  }
+
+  setAudioMuted(muted: boolean): void {
+    if (!this.audioStateEl) return;
+    this.audioStateEl.textContent = muted ? '○' : '●';
+    this.audioStateEl.style.color = muted ? 'rgb(var(--fg) / 0.35)' : 'rgb(var(--green))';
   }
 }
