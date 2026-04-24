@@ -71,12 +71,25 @@ export class Input {
     return out;
   }
 
+  injectMouseDelta(dx: number, dy: number): void {
+    this.mouseDelta.x += dx;
+    this.mouseDelta.y += dy;
+  }
+
+  setVirtualAction(action: InputAction, active: boolean): void {
+    if (active) this.actions.add(action);
+    else this.actions.delete(action);
+  }
+
   get isPointerLocked(): boolean {
     return this.pointerLocked;
   }
 
   requestPointerLock = (): void => {
-    if (!this.pointerLocked) void this.canvas.requestPointerLock();
+    if (this.pointerLocked) return;
+    if (typeof this.canvas.requestPointerLock === 'function') {
+      try { void this.canvas.requestPointerLock(); } catch { /* unsupported on touch devices */ }
+    }
   };
 
   exitPointerLock(): void {

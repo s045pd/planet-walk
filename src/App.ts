@@ -10,6 +10,7 @@ import { Player } from './player/Player';
 import { SurfaceScene } from './surface/SurfaceScene';
 import type { SampleEntry } from './ui/Phase';
 import { HUD } from './ui/HUD';
+import { TouchControls } from './ui/TouchControls';
 
 export class App {
   private engine: Engine;
@@ -67,6 +68,12 @@ export class App {
       () => this.toggleMode(),
     );
     this.hud.setConfig(startConfig);
+
+    new TouchControls(document.body, this.input, {
+      onToggleMode: () => this.toggleMode(),
+      onSample: () => this.collectSample(),
+      onOpenWorlds: () => this.hud.worldSelect.toggle(),
+    });
 
     this.bindKeys();
 

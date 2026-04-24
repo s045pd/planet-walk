@@ -496,6 +496,100 @@ body, canvas#app { cursor: crosshair; }
   text-align: right;
 }
 
+/* ==================== TOUCH CONTROLS (auto-show on touch devices) ==================== */
+.touchctrl {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  display: none;
+}
+@media (hover: none) and (pointer: coarse), (max-width: 860px) {
+  .touchctrl { display: block; }
+  .legend__keys { display: none; }
+}
+
+.touchctrl__look {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 75%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touchctrl__joystick {
+  position: absolute;
+  bottom: 170px;
+  left: 48px;
+  width: 128px;
+  height: 128px;
+  pointer-events: auto;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.touchctrl__joystick-ring {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid rgb(var(--fg) / 0.6);
+  border-radius: 50%;
+  background: rgb(var(--bg) / 0.45);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 30px rgb(0 0 0 / 0.5);
+}
+.touchctrl__joystick-knob {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgb(var(--fg) / 0.92);
+  transition: transform 0.12s ease-out;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.55);
+}
+
+.touchctrl__buttons {
+  position: absolute;
+  bottom: 170px;
+  right: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+.touchctrl__btn {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  color: rgb(var(--fg));
+  background: rgb(var(--bg) / 0.65);
+  border: 1px solid rgb(var(--fg) / 0.75);
+  backdrop-filter: blur(8px);
+  padding: 14px 20px;
+  border-radius: 999px;
+  min-width: 100px;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: all 0.14s;
+}
+.touchctrl__btn.is-held {
+  background: rgb(var(--fg));
+  color: rgb(var(--bg));
+  transform: scale(0.96);
+}
+.touchctrl__btn--jump { border-color: rgb(var(--blue)); color: rgb(var(--blue)); }
+.touchctrl__btn--jump.is-held { background: rgb(var(--blue)); color: rgb(var(--bg)); }
+.touchctrl__btn--sprint { border-color: rgb(var(--yellow)); color: rgb(var(--yellow)); }
+.touchctrl__btn--sprint.is-held { background: rgb(var(--yellow)); color: rgb(var(--bg)); }
+.touchctrl__btn--sample { border-color: rgb(var(--green)); color: rgb(var(--green)); }
+
 /* ==================== CINEMATIC DESCENT ==================== */
 .viewport.is-shaking {
   animation: viewport-shake 0.6s linear infinite;

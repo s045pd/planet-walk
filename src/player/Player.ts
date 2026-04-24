@@ -136,8 +136,8 @@ export class Player {
   }
 
   private updateSurface(delta: number, surface: SurfaceScene): void {
-    if (this.input.isPointerLocked) {
-      const m = this.input.consumeMouseDelta();
+    const m = this.input.consumeMouseDelta();
+    if (m.x !== 0 || m.y !== 0) {
       this.yaw -= m.x * 0.0022;
       this.pitch = clamp(this.pitch - m.y * 0.0022, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
     }
@@ -186,8 +186,8 @@ export class Player {
   }
 
   private updateSpherical(delta: number): void {
-    if (this.input.isPointerLocked) {
-      const m = this.input.consumeMouseDelta();
+    const m = this.input.consumeMouseDelta();
+    if (m.x !== 0 || m.y !== 0) {
       this.yaw -= m.x * 0.0022;
       this.pitch = clamp(this.pitch - m.y * 0.0022, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
     }
