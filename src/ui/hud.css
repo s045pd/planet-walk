@@ -751,6 +751,164 @@ body, canvas#app { cursor: crosshair; }
   width: 4px; height: 1px;
   background: rgb(var(--fg) / 0.4);
 }
+
+/* ==================== MOBILE LAYOUT (≤ 860 px) ==================== */
+@media (hover: none) and (pointer: coarse), (max-width: 860px) {
+  #hud {
+    grid-template-rows: 44px 1fr 64px;
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    grid-row: 1; grid-column: 1;
+    padding: 0 14px;
+    gap: 8px;
+  }
+  .topbar__brand { gap: 1px; }
+  .topbar__brand-name { font-size: 11px; letter-spacing: 0.25em; }
+  .topbar__brand-rev { display: none; }
+  .topbar__mission-label { display: none; }
+  .topbar__mission-value {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 40vw;
+  }
+  .topbar__time {
+    gap: 8px;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+  }
+  .topbar__signal { display: none; }
+  .topbar__time-value { font-size: 9px; }
+  .topbar__live { font-size: 9px; gap: 4px; }
+  .topbar__live::before { width: 6px; height: 6px; }
+
+  /* Phase: float over viewport, only show the active step */
+  .phase {
+    grid-row: 2; grid-column: 1;
+    position: absolute;
+    top: 56px;
+    left: 14px;
+    padding: 0;
+    pointer-events: none;
+    max-width: 60%;
+    z-index: 6;
+  }
+  .phase__label {
+    font-size: 8px;
+    letter-spacing: 0.35em;
+    padding-bottom: 4px;
+    border-bottom: 0.5px solid rgb(var(--rule) / 0.3);
+  }
+  .phase__list { padding-top: 8px; gap: 4px; }
+  .phase__item {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 2px 4px;
+  }
+  .phase__item--done { display: none; }
+  .phase__item:not(.phase__item--active) { display: none; }
+  .phase__dot { width: 5px; height: 5px; }
+  .notes { display: none; }
+  .notes--samples { display: none; }
+
+  /* Viewport: smaller brackets, hide cam metadata */
+  .viewport {
+    grid-row: 2; grid-column: 1;
+    padding: 6px;
+  }
+  .viewport__cam { font-size: 7px; top: 8px; left: 12px; }
+  .viewport__cam .muted { display: none; }
+  .viewport__bracket { width: 14px; height: 14px; }
+  .viewport__bracket--tl { top: 6px; left: 6px; }
+  .viewport__bracket--tr { top: 6px; right: 6px; }
+  .viewport__bracket--bl { bottom: 6px; left: 6px; }
+  .viewport__bracket--br { bottom: 6px; right: 6px; }
+  .viewport__crosshair { width: 24px; height: 24px; opacity: 0.3; }
+  .target__pin {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    bottom: 45%;
+    left: 45%;
+  }
+
+  .modebtn {
+    bottom: 210px;
+    padding: 9px 18px;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+  }
+  .modebtn__marker { margin-right: 6px; }
+
+  /* Right panel + minimap hidden on mobile (space too tight) */
+  .rightpanel { display: none !important; }
+  .minimap { display: none !important; }
+
+  /* Telemetry: 3 critical cells only */
+  .telemetry {
+    grid-row: 3; grid-column: 1;
+    grid-template-columns: repeat(3, 1fr);
+    height: 64px;
+    background: rgb(var(--panel) / 0.94);
+  }
+  .telemetry__cell { padding: 8px 10px; gap: 2px; }
+  .telemetry__cell:nth-child(3),
+  .telemetry__cell:nth-child(5) { display: none; }
+  .telemetry__label { font-size: 7px; letter-spacing: 0.25em; }
+  .telemetry__value { font-size: 20px; }
+  .telemetry__value--stack { font-size: 13px; line-height: 1.2; }
+  .telemetry__value--stack span small { display: none; }
+  .telemetry__unit { font-size: 7px; letter-spacing: 0.2em; }
+  .telemetry__system-row { font-size: 8px; letter-spacing: 0.1em; }
+
+  .legend { display: none; }
+
+  /* TouchControls sized for thumbs */
+  .touchctrl__joystick {
+    bottom: 88px;
+    left: 20px;
+    width: 108px;
+    height: 108px;
+  }
+  .touchctrl__joystick-knob {
+    width: 42px; height: 42px;
+  }
+  .touchctrl__buttons {
+    bottom: 88px;
+    right: 16px;
+    gap: 10px;
+  }
+  .touchctrl__btn {
+    padding: 10px 14px;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    min-width: 82px;
+  }
+
+  /* WorldSelect grid collapses on narrow screens */
+  .worldselect__panel {
+    padding: 24px 20px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .worldselect__header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .worldselect__title { font-size: 18px; letter-spacing: 0.3em; }
+  .worldselect__hint { font-size: 8px; letter-spacing: 0.3em; }
+  .worldselect__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .worldselect__card {
+    min-height: 140px;
+    padding: 14px;
+  }
+  .worldselect__card-name { font-size: 22px; margin: 6px 0 2px 0; }
+  .worldselect__card-tag { font-size: 8px; letter-spacing: 0.15em; min-height: 30px; }
+  .worldselect__card-grav { font-size: 16px; }
+}
 .notes--samples .notes__title {
   color: rgb(var(--green));
   border-bottom-color: rgb(var(--green) / 0.4);
