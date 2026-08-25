@@ -1,9 +1,0 @@
-node_modules/
-dist/
-*.log
-
-# 大纹理文件（用 npm run textures:download 下载）
-public/assets/textures/**/*.jpg
-public/assets/textures/**/*.png
-public/assets/textures/**/*.webp
-!public/assets/textures/**/.gitkeep
