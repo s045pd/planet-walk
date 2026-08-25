@@ -9,3 +9,4 @@ public/assets/textures/**/*.jpg
 public/assets/textures/**/*.png
 public/assets/textures/**/*.webp
 !public/assets/textures/**/.gitkeep
+.claude/settings.local.json
